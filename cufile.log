@@ -7,3 +7,21 @@
  09-03-2026 20:58:17:285 [pid=257049 tid=257049] ERROR  cufio-fs:79 mount option not found in mount table data device: /dev/nvme0n1p2
  09-03-2026 20:58:17:285 [pid=257049 tid=257049] NOTICE  cufio:289 cuFileHandleRegister GDS not supported or disabled by config, using cuFile posix read/write with compat mode enabled
  09-03-2026 20:58:17:303 [pid=257049 tid=258478] WARN   cufio_core:1856 checkIfHostMem returning false for devPtr: 0x7f0374000000 curesult =  0
+ 10-03-2026 01:07:40:551 [pid=350803 tid=350803] WARN   0:140 unable to load,  liburcu-bp.so.6 
+
+ 10-03-2026 01:07:40:551 [pid=350803 tid=350803] WARN   0:140 unable to load,  liburcu-bp.so.1 
+
+ 10-03-2026 01:07:40:861 [pid=350803 tid=350803] WARN   0:184 failed to open /proc/driver/nvidia-fs/devcount  error: No such file or directory
+ 10-03-2026 01:07:40:861 [pid=350803 tid=350803] NOTICE  cufio-drv:1063 running in compatible mode
+ 10-03-2026 01:07:42:185 [pid=350803 tid=350803] ERROR  cufio-fs:79 mount option not found in mount table data device: /dev/nvme0n1p2
+ 10-03-2026 01:07:42:185 [pid=350803 tid=350803] NOTICE  cufio:289 cuFileHandleRegister GDS not supported or disabled by config, using cuFile posix read/write with compat mode enabled
+ 10-03-2026 01:07:42:196 [pid=350803 tid=350949] WARN   cufio_core:1856 checkIfHostMem returning false for devPtr: 0x7f08c6000000 curesult =  0
+ 10-03-2026 01:11:24:176 [pid=353107 tid=353107] WARN   0:140 unable to load,  liburcu-bp.so.6 
+
+ 10-03-2026 01:11:24:176 [pid=353107 tid=353107] WARN   0:140 unable to load,  liburcu-bp.so.1 
+
+ 10-03-2026 01:11:24:491 [pid=353107 tid=353107] WARN   0:184 failed to open /proc/driver/nvidia-fs/devcount  error: No such file or directory
+ 10-03-2026 01:11:24:491 [pid=353107 tid=353107] NOTICE  cufio-drv:1063 running in compatible mode
+ 10-03-2026 01:11:25:661 [pid=353107 tid=353107] ERROR  cufio-fs:79 mount option not found in mount table data device: /dev/nvme0n1p2
+ 10-03-2026 01:11:25:661 [pid=353107 tid=353107] NOTICE  cufio:289 cuFileHandleRegister GDS not supported or disabled by config, using cuFile posix read/write with compat mode enabled
+ 10-03-2026 01:11:25:672 [pid=353107 tid=353250] WARN   cufio_core:1856 checkIfHostMem returning false for devPtr: 0x7f2044000000 curesult =  0
