@@ -9,6 +9,14 @@
 </figure>
 
 ---
+## File Structure
+`CERT-x466-003_MAIN.ipynb`: This jupyter notebook is the main file I will be using for the course. I will put my assignment submissions here, as well as the main code for data analysis, visualization, and and transformation.
+`data/`: This directory contains the datasets I will be using to complete the assignments.
+`docs/`: This directory contains written assignment submissions, documentation, and other supplementary materials for the course
+`notebook_images/`: This directory contains images I will use either in this markdown file or the jupyter notebook listed above.
+`src/`: This directory is where I will store helper files and notebooks used to assist in dataset gathering, analysis, visualizations, and whatever else I cook-up
+
+---
 ## Course Information
 Data holds immense power, but only when effectively communicated. This course will equip you with skills to craft compelling data stories that resonate with your audience and drive meaningful action. You'll learn how to transform data into a captivating narrative, empowering informed decision-making across your organization.
 
