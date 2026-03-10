@@ -10,7 +10,7 @@
 
 ---
 ## File Structure
-- `CERT-x466-003_MAIN.ipynb`: This jupyter notebook is the main file I will be using for the course. I will put my assignment submissions here, as well as the main code for data analysis, visualization, and and transformation.
+- `CERT-x466-003_MAIN.ipynb`: This jupyter notebook is the main file I will be using for the course. I will put my assignment submissions here, as well as the main code for data analysis, visualization, and and transformation. [Link to Notebook](https://github.com/wanderduck/CERT-x466-003/blob/master/CERT-x466-003_MAIN.ipynb)
 - `data/`: This directory contains the datasets I will be using to complete the assignments.
 - `docs/`: This directory contains written assignment submissions, documentation, and other supplementary materials for the course
 - `notebook_images/`: This directory contains images I will use either in this markdown file or the jupyter notebook listed above.
