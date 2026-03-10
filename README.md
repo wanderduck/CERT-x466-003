@@ -1,8 +1,12 @@
 <figure style="text-align: center;">
-    <img src="notebook_images/ai_jobMarket01.png" alt="AI Job Market">
+    <img src="notebook_images/umn_banner.png" alt="University of Minnesota">
 </figure>
 
 # <center><u>**CERT x466-003**</u>: Data Storytelling<br>AI Job Market Data Exploration and Storytelling</center>
+
+<figure style="text-align: center;">
+    <img src="notebook_images/ai_jobMarket01.png" alt="AI Job Market">
+</figure>
 
 ---
 ## Course Information
