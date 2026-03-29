@@ -105,7 +105,7 @@ In this assignment, you will start to develop your data story using the data tha
 
 #### Assignment 04 - Incorporating Data Visualizations
 In Module 3, you created a sketch of your data story that includes the main points that you want to convey. In this assignment, you will select visuals to illustrate these points. The final product will be an outline of your data story with the key points and corresponding visuals. The format for this can be flexible. If you feel confident in creating visuals in one of the programs we discussed, you can do that. If you don’t, it is okay to sketch or describe the visual. Remember that visuals don’t always need to be some sort of graph or figure!
-<br>
+<br><br>
 
 #### Assignment05 - Data Story Presentation
 You’ve now outlined the narrative for your data story and chosen visuals to illustrate your main points. We’re ready to start putting everything together into a presentation! You can choose a format that works for your data story: a PowerPoint presentation, infographic, or 1-2 pager will likely work the best for our context.
