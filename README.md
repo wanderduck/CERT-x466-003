@@ -12,7 +12,7 @@
 ## File Structure
 - `CERT-x466-003_MAIN.ipynb`: This jupyter notebook is the main file I will be using for the course. I will put my assignment submissions here, as well as the main code for data analysis, visualization, and and transformation. [Link to Notebook](https://github.com/wanderduck/CERT-x466-003/blob/master/CERT-x466-003_MAIN.ipynb)
 - `data/`: This directory contains the datasets I will be using to complete the assignments.
-- `docs/`: This directory contains written [assignment submissions](https://github.com/wanderduck/CERT-x466-003/tree/master/docs/assignments), documentation, and other supplementary materials for the course
+- `docs/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/docs/assignments) contains written assignment submissions, documentation, and other supplementary materials for the course
 - `notebook_images/`: This directory contains images I will use either in this markdown file or the jupyter notebook listed above.
 - `src/`: This directory is where I will store helper files and notebooks used to assist in dataset gathering, analysis, visualizations, and whatever else I cook-up
 
@@ -38,6 +38,7 @@ Data holds immense power, but only when effectively communicated. This course wi
 - Create slide decks that communicate the story of data sets using principles of visual communication and audience-alignment.
 - Present data and associated insights to audience at various levels of an organization
 
+---
 ## Modules
 ### **Week 1**: What is data storytelling?
 We will establish a definition of data storytelling and will talk about its benefits and applications. We will think about where we see data storytelling in our own work and lives, and will study specific examples of data storytelling to understand different approaches and use cases.
@@ -73,3 +74,42 @@ We’ll use the synchronous session next module to present your stories to class
 In our final module, we will focus on presenting your data story. We will discuss principles of an effective presentation and how to tailor presentations of your data story to different audiences. We will talk through tools and techniques for getting the main points of your data story across to an audience in a succinct, effective way. We will also briefly touch on how to make accessible presentations.
 #### Assignments:
 Reflection: Discussion board reflecting on what you learned and what you are going to take away from this class.
+
+### Assignment Specifics
+#### Assignment 01 - Data Story Example
+Find, critique and reflect on a data story. This can be multimedia (i.e., The Indicator podcast), a data-driven news article, etc. Once you identify your data story, please write a reflection answering the following questions:
+- What is the purpose of the data story? What is the author(s) / presenter(s) trying to do?
+- What data is used to tell the story?
+- What are the key points or main takeaways of the data story?
+- How well do you think the author does at telling this story with data? What would you do differently?
+<br>
+#### Assignment 02 - Identify Data and Key Points
+Your final project will be a data story of your own. Start to think about a data story that you want to tell. You don’t need to have any of the content of the story decided yet, but try and have a general question or topic area in mind.
+In this assignment, you will identify data that might help you to tell this story. Find 1-3 data sources that have information that you want to include in your data story. This might be raw data that needs to be analyzed, or it might be data that is already tabulated, aggregated, or analyzed. It can be something you find online (external data), or data that you bring from your organization (internal data).
+In your write-up, include the following:
+- Describe the data that you found including where it came from / how it was collected, the contents of the data source, and anything else you notice about the quality of the data.
+- Identify patterns, trends, or data points that you may want to include in your data story. This can just be a bulleted list.
+- (Optional) If possible with the data you are using, you can try to use AI to help you identify key points in the data. Compare with what you came up with.
+<br>
+#### Assignment 03 - Data Story Sketch/Storyboard
+In this assignment, you will start to develop your data story using the data that you found and begin to analyze in Module 2. You will first define the objectives and audience of your data story, and then start to build out the narrative.
+- Part 1: Objectives and audience
+    - What is the purpose of this data story? Define 1-2 clear objectives that you hope the data story will achieve. If your story is intended to influence decisions, make sure you describe what decisions it might influence.
+    - Who are the intended audience(s) for the data story you’re considering?
+    - What do you know about these audiences, and how will that impact the way that you might prepare and present the data story?
+- Part 2: Narrative
+    - Create an outline of your data story narrative that includes the key points and the data that you will use to make those key points.
+<br>
+#### Assignment 04 - Incorporating Data Visualizations
+In Module 3, you created a sketch of your data story that includes the main points that you want to convey. In this assignment, you will select visuals to illustrate these points. The final product will be an outline of your data story with the key points and corresponding visuals. The format for this can be flexible. If you feel confident in creating visuals in one of the programs we discussed, you can do that. If you don’t, it is okay to sketch or describe the visual. Remember that visuals don’t always need to be some sort of graph or figure!
+<br>
+#### Assignment05 - Data Story Presentation
+You’ve now outlined the narrative for your data story and chosen visuals to illustrate your main points. We’re ready to start putting everything together into a presentation! You can choose a format that works for your data story: a PowerPoint presentation, infographic, or 1-2 pager will likely work the best for our context.
+- Please note: We’ll use the synchronous session next module to present your stories to classmates! More instructions will be provided in class.
+- If you are not able to attend the synchronous session, please submit a recorded presentation of your data story that is around 5 minutes.
+<br>
+#### Assignment 06 - Reflection
+Create a post on the discussion board.
+In your post, please reflect on what you learned and what you are going to take away from this class. What really resonated with you? What can you apply in settings outside of this class, work or otherwise? Respond to your peers with any questions and insights based on their own reflections.
+
+---
