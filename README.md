@@ -14,7 +14,6 @@
 - `data/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/data) contains the datasets I will be using to complete the assignments.
 - `docs/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/docs/assignments) contains written assignment submissions, documentation, and other supplementary materials for the course
 - `notebook_images/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/notebook_images) contains images I will use either in this markdown file or the jupyter notebook listed above.
-- `src/`: This directory is where I will store helper files and notebooks used to assist in dataset gathering, analysis, visualizations, and whatever else I cook-up
 
 ---
 ## Project Goals

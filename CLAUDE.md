@@ -44,7 +44,6 @@ uv run python src/<script>.py
 - `CERT-x466-003_MAIN.ipynb` — primary notebook for all assignments and analysis
 - `data/` — datasets (`ai_job_market_dataset.csv`, `boot_ai_job_market_dataset.csv`)
 - `docs/assignments/` — written assignment submissions in Markdown
-- `src/` — helper scripts and auxiliary notebooks
 - `models/` — saved model artifacts
 
 ## Workflow Notes
