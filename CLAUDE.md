@@ -50,6 +50,32 @@ uv run python src/<script>.py
 ## Workflow Notes
 
 Assignment submissions go in `docs/assignments/` named `Logan-R-Sloan_CERT-x466-003_Assignment0X.md`. The main notebook is the primary workspace; `src/` holds supporting code kept out of the main notebook.
+Assignment submission files use the suffix `_submission.md` (e.g., `Logan-R-Sloan_CERT-x466-003_Assignment03_submission.md`).
+
+## Notebook Access
+
+`CERT-x466-003_MAIN.ipynb` exceeds the Read tool's 10k token limit. To inspect it, parse as JSON via Bash:
+```bash
+python3 -c "
+import json
+with open('CERT-x466-003_MAIN.ipynb') as f:
+    nb = json.load(f)
+for i, c in enumerate(nb['cells']):
+    print(f'[{i:3d}] {c[\"cell_type\"]:8s} | {chr(10).join(c[\"source\"])[:120]}')
+"
+```
+
+## Notebook Structure (69 cells)
+
+- **Cells 0–3**: Title and separators
+- **Cells 4–6**: Kaggle dataset download
+- **Cells 7–9**: GPU acceleration (cudf.pandas)
+- **Cells 10–12**: Imports
+- **Cells 13–21**: Dataset loading, shape (15,518 × 19), dtypes, nulls, nunique, describe
+- **Cells 22–52**: **EDA** — 30 Plotly charts numbered 1–30 (salary distributions, experience trends, skills, seasonal hiring, entry-level-filtered views, etc.)
+- **Cells 53–60**: **ML** — 6 models (salary prediction, experience classification, urgency, remote type, growth analysis, PyTorch Integrated Gradients)
+- **Cells 61–66**: **Deep Learning** — entity embeddings, autoencoder anomaly detection
+- **Cells 67–68**: DATA STORY section (placeholder)
 
 ## Package Index Configuration
 
@@ -58,4 +84,5 @@ Assignment submissions go in `docs/assignments/` named `Logan-R-Sloan_CERT-x466-
 - `nvidia-pypi` — RAPIDS/cuDF/cuML packages from `https://pypi.nvidia.com`
 
 ## Project Goals
-- To
+- To use data visualization and data storytelling techniques to examine the `docs/boot_ai_job_market_dataset.csv` dataset to create a forecast of the future AI job market, primarily focusing on individuals planning to enter the job market with little to no work experience.
+

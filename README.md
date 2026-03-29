@@ -11,10 +11,14 @@
 ---
 ## File Structure
 - `CERT-x466-003_MAIN.ipynb`: This jupyter notebook is the main file I will be using for the course. I will put my assignment submissions here, as well as the main code for data analysis, visualization, and and transformation. [Link to Notebook](https://github.com/wanderduck/CERT-x466-003/blob/master/CERT-x466-003_MAIN.ipynb)
-- `data/`: This directory contains the datasets I will be using to complete the assignments.
+- `data/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/data) contains the datasets I will be using to complete the assignments.
 - `docs/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/docs/assignments) contains written assignment submissions, documentation, and other supplementary materials for the course
-- `notebook_images/`: This directory contains images I will use either in this markdown file or the jupyter notebook listed above.
+- `notebook_images/`: This [directory](https://github.com/wanderduck/CERT-x466-003/tree/master/notebook_images) contains images I will use either in this markdown file or the jupyter notebook listed above.
 - `src/`: This directory is where I will store helper files and notebooks used to assist in dataset gathering, analysis, visualizations, and whatever else I cook-up
+
+---
+## Project Goals
+- To use data visualization and data storytelling techniques to craft a narrative from an examination of the `docs/boot_ai_job_market_dataset.csv` dataset, creating a forecast of the future AI job market primarily focused on individuals planning to enter the job market with little to no work experience, so as to inform these individuals (as the audience of the data story) what the job market demands to enter, when the best time to apply is, what industries they can expect to find the most work within, what their career prospects will potentially be like, and any other narrative point that seems fruitful to explore and tell.
 
 ---
 ## Course Information
@@ -95,7 +99,7 @@ In your write-up, include the following:
 
 #### Assignment 03 - Data Story Sketch/Storyboard
 In this assignment, you will start to develop your data story using the data that you found and begin to analyze in Module 2. You will first define the objectives and audience of your data story, and then start to build out the narrative.
-- Part 1: Objectives and audience
+- Part 1: Objectives and Audience
     - What is the purpose of this data story? Define 1-2 clear objectives that you hope the data story will achieve. If your story is intended to influence decisions, make sure you describe what decisions it might influence.
     - Who are the intended audience(s) for the data story you’re considering?
     - What do you know about these audiences, and how will that impact the way that you might prepare and present the data story?

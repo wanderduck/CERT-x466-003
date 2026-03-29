@@ -18,7 +18,7 @@ In your write-up, include the following:
 
 ## Assignment 03
 In this assignment, you will start to develop your data story using the data that you found and begin to analyze in Module 2. You will first define the objectives and audience of your data story, and then start to build out the narrative.
-- Part 1: Objectives and audience
+- Part 1: Objectives and Audience
     - What is the purpose of this data story? Define 1-2 clear objectives that you hope the data story will achieve. If your story is intended to influence decisions, make sure you describe what decisions it might influence.
     - Who are the intended audience(s) for the data story you’re considering?
     - What do you know about these audiences, and how will that impact the way that you might prepare and present the data story?

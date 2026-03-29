@@ -61,3 +61,12 @@
  10-03-2026 20:11:45:649 [pid=515205 tid=515205] ERROR  cufio-fs:79 mount option not found in mount table data device: /dev/nvme0n1p2
  10-03-2026 20:11:45:649 [pid=515205 tid=515205] NOTICE  cufio:289 cuFileHandleRegister GDS not supported or disabled by config, using cuFile posix read/write with compat mode enabled
  10-03-2026 20:11:45:691 [pid=515205 tid=515336] WARN   cufio_core:1856 checkIfHostMem returning false for devPtr: 0x7fad3a000000 curesult =  0
+ 29-03-2026 07:25:33:399 [pid=434206 tid=434206] WARN   0:140 unable to load,  liburcu-bp.so.6 
+
+ 29-03-2026 07:25:33:399 [pid=434206 tid=434206] WARN   0:140 unable to load,  liburcu-bp.so.1 
+
+ 29-03-2026 07:25:33:749 [pid=434206 tid=434206] WARN   0:184 failed to open /proc/driver/nvidia-fs/devcount  error: No such file or directory
+ 29-03-2026 07:25:33:749 [pid=434206 tid=434206] NOTICE  cufio-drv:1063 running in compatible mode
+ 29-03-2026 07:25:35:503 [pid=434206 tid=434206] ERROR  cufio-fs:79 mount option not found in mount table data device: /dev/nvme0n1p2
+ 29-03-2026 07:25:35:503 [pid=434206 tid=434206] NOTICE  cufio:289 cuFileHandleRegister GDS not supported or disabled by config, using cuFile posix read/write with compat mode enabled
+ 29-03-2026 07:25:35:561 [pid=434206 tid=434346] WARN   cufio_core:1856 checkIfHostMem returning false for devPtr: 0x7f2258000000 curesult =  0
