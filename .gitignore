@@ -2,3 +2,6 @@
 .envrc
 
 sample.ipynb
+
+/.quarto/
+**/*.quarto_ipynb

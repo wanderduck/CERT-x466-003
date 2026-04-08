@@ -74,7 +74,7 @@ for i, c in enumerate(nb['cells']):
 - **Cells 22–52**: **EDA** — 30 Plotly charts numbered 1–30 (salary distributions, experience trends, skills, seasonal hiring, entry-level-filtered views, etc.)
 - **Cells 53–60**: **ML** — 6 models (salary prediction, experience classification, urgency, remote type, growth analysis, PyTorch Integrated Gradients)
 - **Cells 61–66**: **Deep Learning** — entity embeddings, autoencoder anomaly detection
-- **Cells 67–68**: DATA STORY section (placeholder)
+
 
 ## Package Index Configuration
 
