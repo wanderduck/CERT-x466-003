@@ -1,0 +1,31 @@
+project:
+  type: default
+  output-dir: /home/wanderduck/000_Duckspace/WanderduckDevelopment/Website/portfolio/
+
+book:
+  title: "Website Portfolio"
+  author: "Wanderduck"
+
+execute:
+  # Keeps the results of code execution so you don't have to 
+  # re-run heavy models/data processing every time you render.
+  cache: true
+  freeze: auto
+
+format:
+  html:
+    theme: cosmo
+    # 'embed-resources' is crucial for Plotly. It bundles the 
+    # JavaScript directly into the HTML file so the graphs work 
+    # anywhere without needing a separate 'site_libs' folder.
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+    toc: true
+    toc-depth: 3
+    # Ensures Plotly renders correctly for web-based viewing
+    include-in-header:
+      text: |
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+editor: visual
