@@ -1,0 +1,720 @@
+
+--- Cell 0 (markdown) ---
+# <center><u>**CERT x466-003**</u>: Data Storytelling<br>AI Job Market Data Exploration and Storytelling</center>
+
+<figure style="text-align: center;">
+    <img src="notebook_images/ai_jobMarket01.png" alt="AI Job Market">
+</figure>
+
+--- Cell 1 (markdown) ---
+---
+
+--- Cell 2 (markdown) ---
+---
+
+--- Cell 3 (markdown) ---
+---
+
+--- Cell 4 (markdown) ---
+## DOWNLOAD AND UNZIP DATASET FROM KAGGLE
+
+--- Cell 5 (code) ---
+from dotenv import load_dotenv
+load_dotenv()
+
+import kaggle
+kaggle.api.dataset_download_files('shree0910/ai-and-data-science-job-market-dataset-20202026', path='./data', unzip=True)
+
+--- Cell 6 (markdown) ---
+---
+
+--- Cell 7 (markdown) ---
+## GPU ACCELERATION
+
+--- Cell 8 (code) ---
+%load_ext cudf.pandas
+# NOTE: cuml.accel is disabled — RAPIDS cu12 JIT compilation fails against
+# the system's CUDA 13.1 headers (/opt/cuda/include/cuda_fp8.hpp).
+# cuml can still be used via direct imports (e.g., from cuml.ensemble import ...).
+# cudf.pandas acceleration works fine for dataframe operations.
+
+# --- Preload CUDA shared libs for TensorFlow + PyTorch GPU support ---
+# TF 2.21 needs cu12 libs; PyTorch cu130 needs cu13 libs.
+# Both are pip-installed under nvidia/*/lib but the Jupyte...
+
+--- Cell 9 (markdown) ---
+---
+
+--- Cell 10 (markdown) ---
+## IMPORTS
+- **NOTE**: run command `direnv allow` in terminal (within the virtual environment) before running imports cell
+
+--- Cell 11 (code) ---
+# General/Data Science Imports
+import pandas as pd
+import numpy as np
+from scipy import stats as sp_stats
+from scipy.spatial.distance import pdist, squareform
+import warnings
+from itertools import product
+
+# Plotting Imports
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# Machine Learning Imports
+from tensorflow import keras
+from tensorflow.keras import layers
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition i...
+
+--- Cell 12 (markdown) ---
+---
+
+--- Cell 13 (markdown) ---
+## DATASET LOADING AND INITIAL LOOK
+
+--- Cell 14 (code) ---
+ai_df = pd.read_csv('data/ai_jobmarket_bootstrapped.csv')
+
+--- Cell 15 (code) ---
+print(ai_df.shape)
+ai_df
+
+--- Cell 16 (code) ---
+dtypes_df = pd.DataFrame(ai_df.dtypes, columns=['Dtype'])
+null_df = pd.DataFrame(ai_df.isnull().sum(), columns=['Null Count'])
+nunique_df = pd.DataFrame(ai_df.nunique(), columns=['Unique Count'])
+decription_df = pd.DataFrame(ai_df.describe())
+
+--- Cell 17 (code) ---
+dtypes_df
+
+--- Cell 18 (code) ---
+null_df
+
+--- Cell 19 (code) ---
+nunique_df
+
+--- Cell 20 (code) ---
+decription_df
+
+--- Cell 21 (markdown) ---
+---
+
+--- Cell 22 (markdown) ---
+## EXPLORATORY DATA ANALYSIS
+
+--- Cell 23 (code) ---
+### 1. Salary Distribution Overview
+fig = px.histogram(ai_df, x='salary', nbins=50, title='Overall Salary Distribution',
+                   labels={'salary': 'Salary (USD)', 'count': 'Number of Postings'},
+                   color_discrete_sequence=['#636EFA'])
+fig.update_layout(bargap=0.05)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)'...
+
+--- Cell 24 (code) ---
+### 2. Salary by Experience Level
+fig = px.box(ai_df, x='experience_level', y='salary', color='experience_level',
+             title='Salary Distribution by Experience Level',
+             category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+             labels={'salary': 'Salary (USD)', 'experience_level': 'Experience Level'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),...
+
+--- Cell 25 (code) ---
+### 3. Salary vs. Years of Experience (scatter with trendline)
+fig = px.scatter(ai_df, x='years_experience', y='salary', color='experience_level',
+                 trendline='lowess', title='Salary vs. Years of Experience',
+                 category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+                 labels={'years_experience': 'Years of Experience', 'salary': 'Salary (USD)'},
+                 opacity=0.3)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba...
+
+--- Cell 26 (code) ---
+### 4. Average Salary Over Time (by year)
+salary_by_year = ai_df.groupby('job_posting_year')['salary'].mean().reset_index()
+fig = px.line(salary_by_year, x='job_posting_year', y='salary',
+              title='Average Salary Trend Over Time (2020–2026)',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='r...
+
+--- Cell 27 (code) ---
+### 5. Salary by Remote Type
+fig = px.box(ai_df, x='remote_type', y='salary', color='remote_type',
+             title='Salary Distribution: Remote vs. Hybrid vs. Onsite',
+             labels={'remote_type': 'Work Type', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_ima...
+
+--- Cell 28 (code) ---
+### 6. Salary by Country
+country_order = ai_df.groupby('country')['salary'].median().sort_values(ascending=False).index.tolist()
+fig = px.box(ai_df, x='country', y='salary', color='country',
+             title='Salary Distribution by Country',
+             category_orders={'country': country_order},
+             labels={'country': 'Country', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolo...
+
+--- Cell 29 (code) ---
+### 7. Salary Heatmap: Company Size × Industry
+pivot = ai_df.pivot_table(values='salary', index='company_industry', columns='company_size', aggfunc='mean')
+if hasattr(pivot, 'to_pandas'):
+    pivot = pivot.to_pandas()
+fig = px.imshow(pivot, text_auto='.0f', aspect='auto',
+                title='Average Salary by Company Size and Industry',
+                labels={'x': 'Company Size', 'y': 'Industry', 'color': 'Avg Salary (USD)'},
+                color_continuous_scale='Viridis')
+
+fig.update_layo...
+
+--- Cell 30 (code) ---
+### 8. Average Salary by Experience Level Over Time
+salary_exp_year = ai_df.groupby(['job_posting_year', 'experience_level'])['salary'].mean().reset_index()
+fig = px.line(salary_exp_year, x='job_posting_year', y='salary', color='experience_level',
+              title='Average Salary by Experience Level Over Time',
+              category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              marke...
+
+--- Cell 31 (code) ---
+### 9. Experience Level Distribution Over Time
+exp_year_counts = ai_df.groupby(['job_posting_year', 'experience_level']).size().reset_index(name='count')
+exp_year_pct = exp_year_counts.copy()
+totals = exp_year_pct.groupby('job_posting_year')['count'].transform('sum')
+exp_year_pct['pct'] = exp_year_pct['count'] / totals * 100
+
+fig = px.bar(exp_year_pct, x='job_posting_year', y='pct', color='experience_level',
+             title='Experience Level Demand Over Time (% of Postings)',
+             cat...
+
+--- Cell 32 (code) ---
+### 10. Job Postings Count by Year
+postings_year = ai_df.groupby('job_posting_year').size().reset_index(name='count')
+fig = px.bar(postings_year, x='job_posting_year', y='count',
+             title='Total Job Postings per Year',
+             labels={'job_posting_year': 'Year', 'count': 'Number of Postings'},
+             text_auto=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+   ...
+
+--- Cell 33 (code) ---
+### 11. Hiring by Country Over Time
+country_year = ai_df.groupby(['job_posting_year', 'country']).size().reset_index(name='count')
+fig = px.area(country_year, x='job_posting_year', y='count', color='country',
+              title='Job Postings by Country Over Time',
+              labels={'job_posting_year': 'Year', 'count': 'Number of Postings'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.6...
+
+--- Cell 34 (code) ---
+### 12. Remote Type Trends Over Time
+remote_year = ai_df.groupby(['job_posting_year', 'remote_type']).size().reset_index(name='count')
+remote_year_pct = remote_year.copy()
+totals = remote_year_pct.groupby('job_posting_year')['count'].transform('sum')
+remote_year_pct['pct'] = remote_year_pct['count'] / totals * 100
+
+fig = px.line(remote_year_pct, x='job_posting_year', y='pct', color='remote_type',
+              title='Remote vs. Hybrid vs. Onsite Trends Over Time (% of Postings)',
+              l...
+
+--- Cell 35 (code) ---
+### 13. Skills Required Over Time
+skill_cols = ['skills_python', 'skills_sql', 'skills_ml', 'skills_deep_learning', 'skills_cloud']
+skills_by_year = ai_df.groupby('job_posting_year')[skill_cols].mean().reset_index()
+skills_melted = skills_by_year.melt(id_vars='job_posting_year', var_name='skill', value_name='proportion')
+skills_melted['skill'] = skills_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.line(skills_melted, x='job_posting_year', y='proportion', ...
+
+--- Cell 36 (code) ---
+### 14. Skills by Experience Level
+skills_by_exp = ai_df.groupby('experience_level')[skill_cols].mean().reindex(['Entry', 'Mid', 'Senior'])
+skills_exp_melted = skills_by_exp.reset_index().melt(id_vars='experience_level', var_name='skill', value_name='proportion')
+skills_exp_melted['skill'] = skills_exp_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.bar(skills_exp_melted, x='experience_level', y='proportion', color='skill',
+             title='Skills Requir...
+
+--- Cell 37 (code) ---
+### 15. Top Skill Combinations
+ai_df['skill_combo'] = (
+    ai_df[skill_cols].apply(
+        lambda row: ' + '.join([c.replace('skills_', '').replace('_', ' ').title()
+                                for c in skill_cols if row[c] == 1]) or 'None',
+        axis=1
+    )
+)
+combo_counts = ai_df['skill_combo'].value_counts().head(15).reset_index()
+combo_counts.columns = ['Skill Combination', 'Count']
+fig = px.bar(combo_counts, x='Count', y='Skill Combination', orientation='h',
+             title='Top...
+
+--- Cell 38 (code) ---
+### 16. Postings per Month — Seasonal Trends
+monthly = ai_df.groupby('job_posting_month').size().reset_index(name='count')
+month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+monthly['month_name'] = monthly['job_posting_month'].map(lambda m: month_names[m - 1])
+
+fig = px.bar(monthly, x='month_name', y='count',
+             title='Job Postings by Month (All Years Combined)',
+             labels={'month_name': 'Month', 'count': 'Number of Postings'},
+...
+
+--- Cell 39 (code) ---
+### 17. Entry/Junior Level Postings by Month — When do companies hire entry level?
+entry_monthly = ai_df[ai_df['experience_level'] == 'Entry'].groupby('job_posting_month').size().reset_index(name='count')
+entry_monthly['month_name'] = entry_monthly['job_posting_month'].map(lambda m: month_names[m - 1])
+
+fig = px.bar(entry_monthly, x='month_name', y='count',
+             title='Entry-Level Postings by Month (When Are Companies Hiring Junior Devs?)',
+             labels={'month_name': 'Month', 'co...
+
+--- Cell 40 (code) ---
+### 18. Job Title Distribution and Salary Comparison
+fig = px.violin(ai_df, x='job_title', y='salary', color='job_title', box=True,
+                title='Salary Distribution by Job Title',
+                labels={'job_title': 'Job Title', 'salary': 'Salary (USD)'})
+fig.update_layout(showlegend=False)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,...
+
+--- Cell 41 (code) ---
+### 19. Industry Hiring Trends Over Time
+industry_year = ai_df.groupby(['job_posting_year', 'company_industry']).size().reset_index(name='count')
+fig = px.line(industry_year, x='job_posting_year', y='count', color='company_industry',
+              title='Hiring Trends by Industry Over Time',
+              labels={'job_posting_year': 'Year', 'count': 'Number of Postings', 'company_industry': 'Industry'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='r...
+
+--- Cell 42 (code) ---
+### 20. Salary by Education Level
+fig = px.box(ai_df, x='education_level', y='salary', color='education_level',
+             title='Salary Distribution by Education Level',
+             category_orders={'education_level': ['Bachelor', 'Master', 'PhD']},
+             labels={'education_level': 'Education Level', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+  ...
+
+--- Cell 43 (code) ---
+### 21. Hiring Urgency Trends Over Time
+urgency_year = ai_df.groupby(['job_posting_year', 'hiring_urgency']).size().reset_index(name='count')
+urgency_pct = urgency_year.copy()
+totals = urgency_pct.groupby('job_posting_year')['count'].transform('sum')
+urgency_pct['pct'] = urgency_pct['count'] / totals * 100
+
+fig = px.bar(urgency_pct, x='job_posting_year', y='pct', color='hiring_urgency',
+             title='Hiring Urgency Trends Over Time',
+             category_orders={'hiring_urgency': ['Low', ...
+
+--- Cell 44 (code) ---
+### 22. Correlation Heatmap of Numerical Features
+numeric_cols = ['years_experience', 'skills_python', 'skills_sql', 'skills_ml',
+                'skills_deep_learning', 'skills_cloud', 'salary', 'job_posting_year', 'job_openings']
+corr = ai_df[numeric_cols].corr()
+if hasattr(corr, 'to_pandas'):
+    corr = corr.to_pandas()
+fig = px.imshow(corr, text_auto='.2f', aspect='auto',
+                title='Correlation Matrix of Numerical Features',
+                color_continuous_scale='RdBu_r', zmin=-...
+
+--- Cell 45 (code) ---
+### 23. Company Size Distribution Over Time
+size_year = ai_df.groupby(['job_posting_year', 'company_size']).size().reset_index(name='count')
+fig = px.bar(size_year, x='job_posting_year', y='count', color='company_size',
+             title='Company Size Distribution of Postings Over Time',
+             labels={'job_posting_year': 'Year', 'count': 'Number of Postings', 'company_size': 'Company Size'},
+             barmode='group')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgb...
+
+--- Cell 46 (code) ---
+### 24. Education Level vs. Experience Level — Salary Heatmap
+edu_exp_salary = ai_df.pivot_table(values='salary', index='education_level', columns='experience_level', aggfunc='mean')
+if hasattr(edu_exp_salary, 'to_pandas'):
+    edu_exp_salary = edu_exp_salary.to_pandas()
+edu_exp_salary = edu_exp_salary.reindex(index=['Bachelor', 'Master', 'PhD'], columns=['Entry', 'Mid', 'Senior'])
+fig = px.imshow(edu_exp_salary, text_auto='.0f', aspect='auto',
+                title='Average Salary: Education Le...
+
+--- Cell 47 (code) ---
+### 25. Job Openings by Experience Level Over Time
+openings_exp = ai_df.groupby(['job_posting_year', 'experience_level'])['job_openings'].sum().reset_index()
+fig = px.bar(openings_exp, x='job_posting_year', y='job_openings', color='experience_level',
+             title='Total Job Openings by Experience Level Over Time',
+             category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+             labels={'job_posting_year': 'Year', 'job_openings': 'Total Openings'},
+             ba...
+
+--- Cell 48 (code) ---
+### 26. Salary by Remote Type Over Time
+salary_remote_year = ai_df.groupby(['job_posting_year', 'remote_type'])['salary'].mean().reset_index()
+fig = px.line(salary_remote_year, x='job_posting_year', y='salary', color='remote_type',
+              title='Average Salary by Work Type Over Time',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)', 'remote_type': 'Work Type'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rg...
+
+--- Cell 49 (code) ---
+### 27. Entry-Level Salary by Remote Type
+entry_df = ai_df[ai_df['experience_level'] == 'Entry']
+fig = px.box(entry_df, x='remote_type', y='salary', color='remote_type',
+             title='Entry-Level Salary Distribution: Remote vs. Hybrid vs. Onsite',
+             labels={'remote_type': 'Work Type', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=di...
+
+--- Cell 50 (code) ---
+### 28. Entry-Level Salary by Industry
+entry_industry = entry_df.groupby('company_industry')['salary'].median().sort_values(ascending=False).index.tolist()
+fig = px.box(entry_df, x='company_industry', y='salary', color='company_industry',
+             title='Entry-Level Salary Distribution by Industry',
+             category_orders={'company_industry': entry_industry},
+             labels={'company_industry': 'Industry', 'salary': 'Salary (USD)'})
+fig.update_layout(showlegend=False)
+
+fig.update_...
+
+--- Cell 51 (code) ---
+### 29. Entry-Level Skill Requirements Over Time
+entry_skills_year = entry_df.groupby('job_posting_year')[skill_cols].mean().reset_index()
+entry_skills_melted = entry_skills_year.melt(id_vars='job_posting_year', var_name='skill', value_name='proportion')
+entry_skills_melted['skill'] = entry_skills_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.line(entry_skills_melted, x='job_posting_year', y='proportion', color='skill',
+              title='Entry-Level Sk...
+
+--- Cell 52 (code) ---
+### 30. Entry-Level Share of Postings Over Time
+exp_counts = ai_df.groupby(['job_posting_year', 'experience_level']).size().reset_index(name='count')
+totals_by_year = exp_counts.groupby('job_posting_year')['count'].transform('sum')
+exp_counts['share'] = exp_counts['count'] / totals_by_year
+entry_share = exp_counts[exp_counts['experience_level'] == 'Entry'].copy()
+
+fig = px.line(entry_share, x='job_posting_year', y='share',
+              title='Entry-Level Share of All Job Postings Over Time',
+  ...
+
+--- Cell 53 (code) ---
+### 31. Entry-Level Salary Over Time
+entry_df = ai_df[ai_df['experience_level'] == 'Entry'].groupby('job_posting_year')['salary'].mean().reset_index()
+
+fig = px.line(entry_df, x='job_posting_year', y='salary',
+              title='Entry-Level Salary Over Time',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              markers=True)
+
+fig.update_traces(line=dict(color='#64AD9A', width=3))
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(...
+
+--- Cell 54 (markdown) ---
+---
+
+--- Cell 55 (markdown) ---
+## MACHINE LEARNING
+
+--- Cell 56 (code) ---
+### ML Feature Preparation (shared across models)
+
+# Encode categorical columns
+ml_df = ai_df.copy()
+label_encoders = {}
+cat_cols = ['job_title', 'company_size', 'company_industry', 'country',
+            'remote_type', 'experience_level', 'education_level', 'hiring_urgency']
+for col in cat_cols:
+    le = LabelEncoder()
+    col_values = ml_df[col]
+    if hasattr(col_values, 'to_pandas'):
+        col_values = col_values.to_pandas()
+    ml_df[col] = le.fit_transform(col_values)
+    label_encoders[...
+
+--- Cell 57 (code) ---
+### ML 1: Salary Prediction — Random Forest vs. Gradient Boosting vs. Linear Regression
+
+# Prepare data
+X = ml_df[feature_cols].astype('float32')
+y = ml_df['salary'].astype('float32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+def to_cpu(x):
+    if hasattr(x, 'to_numpy'):
+        return x.to_numpy()
+    return x
+
+models = {
+    'Linear Regression (cuML)': cuLinearRegression(),
+    'Random Forest (cuML)': cuRFRegressor(n_estimators=333, random_stat...
+
+--- Cell 58 (code) ---
+### ML 2: Experience Level Classification
+
+X = ml_df[['job_title', 'company_size', 'company_industry', 'country', 'remote_type',
+           'years_experience', 'education_level', 'skills_python', 'skills_sql',
+           'skills_ml', 'skills_deep_learning', 'skills_cloud', 'salary',
+           'job_posting_year', 'job_openings']].astype('float32')
+y = ml_df['experience_level'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_clf = cu...
+
+--- Cell 59 (code) ---
+### ML 3: Hiring Urgency Prediction
+X = ml_df[feature_cols].astype('float32')
+y = ml_df['hiring_urgency'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_urgency = cuRFClassifier(n_estimators=333, n_bins=200, n_streams=8, random_state=42)
+rf_urgency.fit(X_train, y_train)
+preds = rf_urgency.predict(X_test)
+
+y_test_cpu = to_cpu(y_test)
+preds_cpu = to_cpu(preds)
+
+print("=== Hiring Urgency Prediction (Random Forest - cuML) ===")
+print(f...
+
+--- Cell 60 (code) ---
+### ML 4: Remote Type Prediction
+X = ml_df[['job_title', 'company_size', 'company_industry', 'country',
+           'experience_level', 'years_experience', 'education_level',
+           'skills_python', 'skills_sql', 'skills_ml', 'skills_deep_learning',
+           'skills_cloud', 'salary', 'job_posting_year', 'job_openings', 'hiring_urgency']].astype('float32')
+y = ml_df['remote_type'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_...
+
+--- Cell 61 (code) ---
+### ML 5: Job Market Growth Analysis — Trend and Year-over-Year Growth
+# 2026 only contains 1 quarter of data (Jan-Mar). 
+# To compute meaningful year-over-year growth and linear trends,
+# we annualize the 2026 data by multiplying it by 4 (12 months / 3 months).
+
+# --- 1. Annual posting counts and YoY growth ---
+annual_counts = ai_df.groupby('job_posting_year').size().reset_index(name='postings')
+
+# Annualize 2026
+months_in_2026 = ai_df[ai_df['job_posting_year'] == 2026]['job_posting_month'].nun...
+
+--- Cell 62 (markdown) ---
+---
+
+--- Cell 63 (markdown) ---
+## DEEP LEARNING
+
+The sklearn models above tell us *what predicts salary*. Now we ask a different question: **what hidden structure exists in the AI job market?**
+
+Deep neural networks won't beat Gradient Boosting on prediction accuracy for 15k tabular rows — that's well-established. Instead, we use them as **exploration tools**:
+- **Entity Embeddings** (TensorFlow/Keras): Learn a continuous "map" of how job categories relate — which roles, countries, and industries the model treats as salary-eq...
+
+--- Cell 64 (code) ---
+### DNN 1: Entity Embeddings — Learning the Hidden Geometry of Job Categories (TensorFlow/Keras)
+
+# --- Define categorical features with embedding dimensions ---
+# Rule of thumb: embedding_dim = min(50, num_unique // 2 + 1)
+cat_feature_info = {
+    'job_title':        (len(label_encoders['job_title'].classes_), 3),
+    'company_size':     (len(label_encoders['company_size'].classes_), 2),
+    'company_industry': (len(label_encoders['company_industry'].classes_), 3),
+    'country':          (len(...
+
+--- Cell 65 (code) ---
+### DNN 2: Autoencoder Anomaly Detection — Finding Structurally Unusual Job Postings (TensorFlow/Keras)
+
+# --- Prepare all features as a single normalized matrix ---
+ae_features = feature_cols + ['hiring_urgency', 'salary']
+X_ae = ml_df[ae_features].values.astype('float32')
+scaler_ae = StandardScaler()
+X_ae_scaled = scaler_ae.fit_transform(X_ae)
+n_ae_features = X_ae_scaled.shape[1]
+
+# --- Build autoencoder ---
+ae_input = keras.Input(shape=(n_ae_features,), name='ae_input')
+
+# --- Encoder ---
+x =...
+
+--- Cell 66 (markdown) ---
+### DL 3: PyTorch Integrated Gradients — Per-Feature Salary Attribution
+
+**Why PyTorch here?** Random Forest gives one global feature-importance bar chart. Integrated
+Gradients (a gradient-based attribution method) gives a *per-sample* importance score for every
+feature, letting us ask richer questions: "What drives salary predictions for Senior vs. Entry
+roles?" or "How does attribution differ across countries?"
+
+PyTorch's eager-mode autograd makes this cleaner to implement than in TensorFlow. ...
+
+--- Cell 67 (code) ---
+# ---------------------------------------------------------------------------
+# 1. Prepare data (uses ml_df, feature_cols from the shared ML prep cell)
+# ---------------------------------------------------------------------------
+X_all = ml_df[feature_cols].values.astype(np.float32)
+y_all = ml_df['salary'].values.astype(np.float32)
+
+# Standardize features and target for neural-net training stability
+X_mean, X_std = X_all.mean(axis=0), X_all.std(axis=0) + 1e-8
+y_mean, y_std = y_all.mean(), y_all....
+
+--- Cell 68 (markdown) ---
+---
+## FORECASTING
+Job Market Projections Through 2028
+
+The EDA and ML sections above show what the AI job market looks like *today*. Now we ask: **where is it heading?**
+
+We use a **hybrid forecasting approach**:
+1. **SARIMA** on aggregate monthly postings to project total market volume
+2. **Proportion models** for each segment (experience level, remote type, industry, country) to forecast *compositional shifts*
+3. **Rate models** for skill requirements (Python, SQL, ML, Deep Learning, Cloud)
+
+...
+
+--- Cell 69 (code) ---
+### Forecast Preparation — Build Monthly Time Series
+
+# --- 1. Aggregate monthly postings ---
+monthly_total = (
+    ai_df.groupby(['job_posting_year', 'job_posting_month'])
+    .size()
+    .reset_index(name='count')
+)
+monthly_total['date'] = pd.to_datetime(
+    monthly_total['job_posting_year'].astype(str) + '-'
+    + monthly_total['job_posting_month'].astype(str).str.zfill(2) + '-01'
+)
+monthly_total = monthly_total.sort_values('date').reset_index(drop=True)
+monthly_total = monthly_total.set_ind...
+
+--- Cell 70 (code) ---
+### Layer 1: Total Postings — SARIMA Forecast
+
+FORECAST_STEPS = 33  # Apr 2026 - Dec 2028
+
+# --- 1. Grid search for best SARIMA order ---
+y = monthly_total['count'].astype(float)
+
+best_aic = np.inf
+best_order = None
+best_seasonal = None
+results_log = []
+
+p_range = range(3)  # 0, 1, 2
+d_range = range(2)  # 0, 1
+q_range = range(3)
+P_range = range(2)  # 0, 1
+D_range = range(2)
+Q_range = range(2)
+
+print("Fitting SARIMA models (this may take a minute)...")
+with warnings.catch_warnings():
+    warnings...
+
+--- Cell 71 (code) ---
+### Layer 2: Proportion Forecasts — Segment Composition Over Time
+
+def fit_best_arima(series, max_p=2, max_d=1, max_q=2):
+    """Fit best ARIMA by AIC. Returns (fitted_model, order) or (None, None) on failure."""
+    best_aic = np.inf
+    best_fit = None
+    best_order = None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for p, d, q in product(range(max_p + 1), range(max_d + 1), range(max_q + 1)):
+            if p == 0 and q == 0 and d == 0:
+                ...
+
+--- Cell 72 (code) ---
+### Skills Rate Forecasts
+
+# --- 1. Forecast overall skill requirement rates ---
+skill_forecasts = pd.DataFrame(index=forecast_dates)
+skill_model_log = []
+
+print("Fitting skill rate models...")
+for skill in skill_cols_forecast:
+    series = skill_rates[skill].astype(float)
+    fit, order = fit_best_arima(series)
+    if fit is not None:
+        fc = fit.forecast(steps=FORECAST_STEPS)
+        skill_forecasts[skill] = fc.values.clip(0, 1)
+        skill_model_log.append({
+            'dimension': 's...
+
+--- Cell 73 (code) ---
+### Diagnostics & Model Summary
+
+# --- 1. Residual diagnostics for the total SARIMA model ---
+residuals = sarima_fit.resid
+
+# Ljung-Box test for residual autocorrelation
+lb_test = acorr_ljungbox(residuals, lags=[12], return_df=True)
+lb_pval = lb_test['lb_pvalue'].values[0]
+
+print("=== Total SARIMA Model Diagnostics ===")
+print(f"Model: SARIMA{best_order}x{best_seasonal}")
+print(f"AIC: {sarima_fit.aic:.1f}")
+print(f"Residual mean: {residuals.mean():.2f}")
+print(f"Residual std: {residuals.std():.2...
+
+--- Cell 74 (code) ---
+### Audience A: Storytelling Visualizations
+BOUNDARY_DATE = pd.Timestamp('2026-04-01').timestamp() * 1000  # Apr 2026
+
+# ========================================================================
+# Chart F1: Total Market Forecast
+# ========================================================================
+fig1 = go.Figure()
+
+# Historical
+hist = total_forecast_df[~total_forecast_df['is_forecast']]
+fig1.add_trace(go.Scatter(
+    x=hist['date'], y=hist['count'],
+    mode='lines', name='Historical',
+   ...
+
+--- Cell 75 (markdown) ---
+### Methodology & Limitations (Technical Appendix)
+
+#### Forecasting Approach
+
+This forecast uses a **hybrid aggregate + proportion** architecture:
+
+1. **Layer 1 (Total Volume):** A Seasonal ARIMA (SARIMA) model fitted on 84 months of aggregate monthly posting counts (Jan 2020 – Dec 2026). Model order was selected by AIC grid search over (p,d,q)(P,D,Q,12) with p,q ∈ {0,1,2}, P,Q ∈ {0,1}, d,D ∈ {0,1}. The model produces point forecasts with 80% and 95% prediction intervals for 24 months (Jan 2027...
+
+--- Cell 76 (markdown) ---
+

@@ -1,6 +1,6 @@
-# CLAUDE.md
+# GEMINI.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Gemini when working with code in this repository.
 
 ## Project Overview
 
@@ -84,4 +84,3 @@ for i, c in enumerate(nb['cells']):
 
 ## Project Goals
 - To use data visualization and data storytelling techniques to examine the `data/ai_jobmarket_bootstrapped.csv` dataset to create a forecast of the future AI job market, primarily focusing on individuals planning to enter the job market with little to no work experience.
-

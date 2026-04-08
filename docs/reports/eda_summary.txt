@@ -1,0 +1,557 @@
+--- MARKDOWN ---
+## EXPLORATORY DATA ANALYSIS
+
+--- CODE ---
+### 1. Salary Distribution Overview
+fig = px.histogram(ai_df, x='salary', nbins=50, title='Overall Salary Distribution',
+                   labels={'salary': 'Salary (USD)', 'count': 'Number of Postings'},
+                   color_discrete_sequence=['#636EFA'])
+fig.update_layout(bargap=0.05)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_01.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 2. Salary by Experience Level
+fig = px.box(ai_df, x='experience_level', y='salary', color='experience_level',
+             title='Salary Distribution by Experience Level',
+             category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+             labels={'salary': 'Salary (USD)', 'experience_level': 'Experience Level'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_02.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 3. Salary vs. Years of Experience (scatter with trendline)
+fig = px.scatter(ai_df, x='years_experience', y='salary', color='experience_level',
+                 trendline='lowess', title='Salary vs. Years of Experience',
+                 category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+                 labels={'years_experience': 'Years of Experience', 'salary': 'Salary (USD)'},
+                 opacity=0.3)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_03.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 4. Average Salary Over Time (by year)
+salary_by_year = ai_df.groupby('job_posting_year')['salary'].mean().reset_index()
+fig = px.line(salary_by_year, x='job_posting_year', y='salary',
+              title='Average Salary Trend Over Time (2020–2026)',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_04.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 5. Salary by Remote Type
+fig = px.box(ai_df, x='remote_type', y='salary', color='remote_type',
+             title='Salary Distribution: Remote vs. Hybrid vs. Onsite',
+             labels={'remote_type': 'Work Type', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_05.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 6. Salary by Country
+country_order = ai_df.groupby('country')['salary'].median().sort_values(ascending=False).index.tolist()
+fig = px.box(ai_df, x='country', y='salary', color='country',
+             title='Salary Distribution by Country',
+             category_orders={'country': country_order},
+             labels={'country': 'Country', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_06.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 7. Salary Heatmap: Company Size × Industry
+pivot = ai_df.pivot_table(values='salary', index='company_industry', columns='company_size', aggfunc='mean')
+if hasattr(pivot, 'to_pandas'):
+    pivot = pivot.to_pandas()
+fig = px.imshow(pivot, text_auto='.0f', aspect='auto',
+                title='Average Salary by Company Size and Industry',
+                labels={'x': 'Company Size', 'y': 'Industry', 'color': 'Avg Salary (USD)'},
+                color_continuous_scale='Viridis')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_07.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 8. Average Salary by Experience Level Over Time
+salary_exp_year = ai_df.groupby(['job_posting_year', 'experience_level'])['salary'].mean().reset_index()
+fig = px.line(salary_exp_year, x='job_posting_year', y='salary', color='experience_level',
+              title='Average Salary by Experience Level Over Time',
+              category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_08.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 9. Experience Level Distribution Over Time
+exp_year_counts = ai_df.groupby(['job_posting_year', 'experience_level']).size().reset_index(name='count')
+exp_year_pct = exp_year_counts.copy()
+totals = exp_year_pct.groupby('job_posting_year')['count'].transform('sum')
+exp_year_pct['pct'] = exp_year_pct['count'] / totals * 100
+
+fig = px.bar(exp_year_pct, x='job_posting_year', y='pct', color='experience_level',
+             title='Experience Level Demand Over Time (% of Postings)',
+             category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+             labels={'job_posting_year': 'Year', 'pct': '% of Postings'},
+             barmode='stack')
+fig.add_vline(x=2024.5, line_dash='dash', line_color='red',
+              annotation_text='Rise of "Vibe Coding" (2025)', annotation_position='top left')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_09.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 10. Job Postings Count by Year
+postings_year = ai_df.groupby('job_posting_year').size().reset_index(name='count')
+fig = px.bar(postings_year, x='job_posting_year', y='count',
+             title='Total Job Postings per Year',
+             labels={'job_posting_year': 'Year', 'count': 'Number of Postings'},
+             text_auto=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_10.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 11. Hiring by Country Over Time
+country_year = ai_df.groupby(['job_posting_year', 'country']).size().reset_index(name='count')
+fig = px.area(country_year, x='job_posting_year', y='count', color='country',
+              title='Job Postings by Country Over Time',
+              labels={'job_posting_year': 'Year', 'count': 'Number of Postings'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_11.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 12. Remote Type Trends Over Time
+remote_year = ai_df.groupby(['job_posting_year', 'remote_type']).size().reset_index(name='count')
+remote_year_pct = remote_year.copy()
+totals = remote_year_pct.groupby('job_posting_year')['count'].transform('sum')
+remote_year_pct['pct'] = remote_year_pct['count'] / totals * 100
+
+fig = px.line(remote_year_pct, x='job_posting_year', y='pct', color='remote_type',
+              title='Remote vs. Hybrid vs. Onsite Trends Over Time (% of Postings)',
+              labels={'job_posting_year': 'Year', 'pct': '% of Postings', 'remote_type': 'Work Type'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_12.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 13. Skills Required Over Time
+skill_cols = ['skills_python', 'skills_sql', 'skills_ml', 'skills_deep_learning', 'skills_cloud']
+skills_by_year = ai_df.groupby('job_posting_year')[skill_cols].mean().reset_index()
+skills_melted = skills_by_year.melt(id_vars='job_posting_year', var_name='skill', value_name='proportion')
+skills_melted['skill'] = skills_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.line(skills_melted, x='job_posting_year', y='proportion', color='skill',
+              title='Skills Demand Over Time (Proportion of Postings Requiring Each Skill)',
+              labels={'job_posting_year': 'Year', 'proportion': 'Proportion of Postings', 'skill': 'Skill'},
+              markers=True)
+fig.update_layout(yaxis_tickformat='.0%')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_13.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 14. Skills by Experience Level
+skills_by_exp = ai_df.groupby('experience_level')[skill_cols].mean().reindex(['Entry', 'Mid', 'Senior'])
+skills_exp_melted = skills_by_exp.reset_index().melt(id_vars='experience_level', var_name='skill', value_name='proportion')
+skills_exp_melted['skill'] = skills_exp_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.bar(skills_exp_melted, x='experience_level', y='proportion', color='skill',
+             title='Skills Required by Experience Level',
+             labels={'experience_level': 'Experience Level', 'proportion': 'Proportion Requiring Skill'},
+             barmode='group')
+fig.update_layout(yaxis_tickformat='.0%')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_14.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 15. Top Skill Combinations
+ai_df['skill_combo'] = (
+    ai_df[skill_cols].apply(
+        lambda row: ' + '.join([c.replace('skills_', '').replace('_', ' ').title()
+                                for c in skill_cols if row[c] == 1]) or 'None',
+        axis=1
+    )
+)
+combo_counts = ai_df['skill_combo'].value_counts().head(15).reset_index()
+combo_counts.columns = ['Skill Combination', 'Count']
+fig = px.bar(combo_counts, x='Count', y='Skill Combination', orientation='h',
+             title='Top 15 Skill Combinations in Job Postings',
+             labels={'Count': 'Number of Postings'})
+fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_15.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 16. Postings per Month — Seasonal Trends
+monthly = ai_df.groupby('job_posting_month').size().reset_index(name='count')
+month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+monthly['month_name'] = monthly['job_posting_month'].map(lambda m: month_names[m - 1])
+
+fig = px.bar(monthly, x='month_name', y='count',
+             title='Job Postings by Month (All Years Combined)',
+             labels={'month_name': 'Month', 'count': 'Number of Postings'},
+             text_auto=True)
+fig.update_layout(xaxis={'categoryorder': 'array', 'categoryarray': month_names})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_16.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 17. Entry/Junior Level Postings by Month — When do companies hire entry level?
+entry_monthly = ai_df[ai_df['experience_level'] == 'Entry'].groupby('job_posting_month').size().reset_index(name='count')
+entry_monthly['month_name'] = entry_monthly['job_posting_month'].map(lambda m: month_names[m - 1])
+
+fig = px.bar(entry_monthly, x='month_name', y='count',
+             title='Entry-Level Postings by Month (When Are Companies Hiring Junior Devs?)',
+             labels={'month_name': 'Month', 'count': 'Entry-Level Postings'},
+             text_auto=True, color_discrete_sequence=['#EF553B'])
+fig.update_layout(xaxis={'categoryorder': 'array', 'categoryarray': month_names})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_17.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 18. Job Title Distribution and Salary Comparison
+fig = px.violin(ai_df, x='job_title', y='salary', color='job_title', box=True,
+                title='Salary Distribution by Job Title',
+                labels={'job_title': 'Job Title', 'salary': 'Salary (USD)'})
+fig.update_layout(showlegend=False)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_18.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 19. Industry Hiring Trends Over Time
+industry_year = ai_df.groupby(['job_posting_year', 'company_industry']).size().reset_index(name='count')
+fig = px.line(industry_year, x='job_posting_year', y='count', color='company_industry',
+              title='Hiring Trends by Industry Over Time',
+              labels={'job_posting_year': 'Year', 'count': 'Number of Postings', 'company_industry': 'Industry'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_19.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 20. Salary by Education Level
+fig = px.box(ai_df, x='education_level', y='salary', color='education_level',
+             title='Salary Distribution by Education Level',
+             category_orders={'education_level': ['Bachelor', 'Master', 'PhD']},
+             labels={'education_level': 'Education Level', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_20.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 21. Hiring Urgency Trends Over Time
+urgency_year = ai_df.groupby(['job_posting_year', 'hiring_urgency']).size().reset_index(name='count')
+urgency_pct = urgency_year.copy()
+totals = urgency_pct.groupby('job_posting_year')['count'].transform('sum')
+urgency_pct['pct'] = urgency_pct['count'] / totals * 100
+
+fig = px.bar(urgency_pct, x='job_posting_year', y='pct', color='hiring_urgency',
+             title='Hiring Urgency Trends Over Time',
+             category_orders={'hiring_urgency': ['Low', 'Medium', 'High']},
+             labels={'job_posting_year': 'Year', 'pct': '% of Postings'},
+             barmode='stack')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_21.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 22. Correlation Heatmap of Numerical Features
+numeric_cols = ['years_experience', 'skills_python', 'skills_sql', 'skills_ml',
+                'skills_deep_learning', 'skills_cloud', 'salary', 'job_posting_year', 'job_openings']
+corr = ai_df[numeric_cols].corr()
+if hasattr(corr, 'to_pandas'):
+    corr = corr.to_pandas()
+fig = px.imshow(corr, text_auto='.2f', aspect='auto',
+                title='Correlation Matrix of Numerical Features',
+                color_continuous_scale='RdBu_r', zmin=-1, zmax=1)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_22.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 23. Company Size Distribution Over Time
+size_year = ai_df.groupby(['job_posting_year', 'company_size']).size().reset_index(name='count')
+fig = px.bar(size_year, x='job_posting_year', y='count', color='company_size',
+             title='Company Size Distribution of Postings Over Time',
+             labels={'job_posting_year': 'Year', 'count': 'Number of Postings', 'company_size': 'Company Size'},
+             barmode='group')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_23.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 24. Education Level vs. Experience Level — Salary Heatmap
+edu_exp_salary = ai_df.pivot_table(values='salary', index='education_level', columns='experience_level', aggfunc='mean')
+if hasattr(edu_exp_salary, 'to_pandas'):
+    edu_exp_salary = edu_exp_salary.to_pandas()
+edu_exp_salary = edu_exp_salary.reindex(index=['Bachelor', 'Master', 'PhD'], columns=['Entry', 'Mid', 'Senior'])
+fig = px.imshow(edu_exp_salary, text_auto='.0f', aspect='auto',
+                title='Average Salary: Education Level × Experience Level',
+                labels={'x': 'Experience Level', 'y': 'Education Level', 'color': 'Avg Salary (USD)'},
+                color_continuous_scale='YlOrRd')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_24.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 25. Job Openings by Experience Level Over Time
+openings_exp = ai_df.groupby(['job_posting_year', 'experience_level'])['job_openings'].sum().reset_index()
+fig = px.bar(openings_exp, x='job_posting_year', y='job_openings', color='experience_level',
+             title='Total Job Openings by Experience Level Over Time',
+             category_orders={'experience_level': ['Entry', 'Mid', 'Senior']},
+             labels={'job_posting_year': 'Year', 'job_openings': 'Total Openings'},
+             barmode='group')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_25.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 26. Salary by Remote Type Over Time
+salary_remote_year = ai_df.groupby(['job_posting_year', 'remote_type'])['salary'].mean().reset_index()
+fig = px.line(salary_remote_year, x='job_posting_year', y='salary', color='remote_type',
+              title='Average Salary by Work Type Over Time',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)', 'remote_type': 'Work Type'},
+              markers=True)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_26.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 27. Entry-Level Salary by Remote Type
+entry_df = ai_df[ai_df['experience_level'] == 'Entry']
+fig = px.box(entry_df, x='remote_type', y='salary', color='remote_type',
+             title='Entry-Level Salary Distribution: Remote vs. Hybrid vs. Onsite',
+             labels={'remote_type': 'Work Type', 'salary': 'Salary (USD)'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_27.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 28. Entry-Level Salary by Industry
+entry_industry = entry_df.groupby('company_industry')['salary'].median().sort_values(ascending=False).index.tolist()
+fig = px.box(entry_df, x='company_industry', y='salary', color='company_industry',
+             title='Entry-Level Salary Distribution by Industry',
+             category_orders={'company_industry': entry_industry},
+             labels={'company_industry': 'Industry', 'salary': 'Salary (USD)'})
+fig.update_layout(showlegend=False)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_28.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 29. Entry-Level Skill Requirements Over Time
+entry_skills_year = entry_df.groupby('job_posting_year')[skill_cols].mean().reset_index()
+entry_skills_melted = entry_skills_year.melt(id_vars='job_posting_year', var_name='skill', value_name='proportion')
+entry_skills_melted['skill'] = entry_skills_melted['skill'].str.replace('skills_', '').str.replace('_', ' ').str.title()
+
+fig = px.line(entry_skills_melted, x='job_posting_year', y='proportion', color='skill',
+              title='Entry-Level Skills Demand Over Time (Proportion of Entry Postings Requiring Each Skill)',
+              labels={'job_posting_year': 'Year', 'proportion': 'Proportion of Postings', 'skill': 'Skill'},
+              markers=True)
+fig.update_layout(yaxis_tickformat='.0%')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_29.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 30. Entry-Level Share of Postings Over Time
+exp_counts = ai_df.groupby(['job_posting_year', 'experience_level']).size().reset_index(name='count')
+totals_by_year = exp_counts.groupby('job_posting_year')['count'].transform('sum')
+exp_counts['share'] = exp_counts['count'] / totals_by_year
+entry_share = exp_counts[exp_counts['experience_level'] == 'Entry'].copy()
+
+fig = px.line(entry_share, x='job_posting_year', y='share',
+              title='Entry-Level Share of All Job Postings Over Time',
+              labels={'job_posting_year': 'Year', 'share': 'Entry-Level Share'},
+              markers=True)
+fig.update_layout(yaxis_tickformat='.1%')
+fig.update_traces(line=dict(color='#EF553B', width=3))
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_30.png', scale=2)
+fig.show()
+
+--- CODE ---
+### 31. Entry-Level Salary Over Time
+entry_df = ai_df[ai_df['experience_level'] == 'Entry'].groupby('job_posting_year')['salary'].mean().reset_index()
+
+fig = px.line(entry_df, x='job_posting_year', y='salary',
+              title='Entry-Level Salary Over Time',
+              labels={'job_posting_year': 'Year', 'salary': 'Average Salary (USD)'},
+              markers=True)
+
+fig.update_traces(line=dict(color='#64AD9A', width=3))
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/eda_31.png', scale=2)
+fig.show()
+
+--- MARKDOWN ---
+---

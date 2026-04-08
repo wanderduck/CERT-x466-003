@@ -1,0 +1,1070 @@
+--- MARKDOWN ---
+## MACHINE LEARNING
+
+--- CODE ---
+### ML Feature Preparation (shared across models)
+
+# Encode categorical columns
+ml_df = ai_df.copy()
+label_encoders = {}
+cat_cols = ['job_title', 'company_size', 'company_industry', 'country',
+            'remote_type', 'experience_level', 'education_level', 'hiring_urgency']
+for col in cat_cols:
+    le = LabelEncoder()
+    col_values = ml_df[col]
+    if hasattr(col_values, 'to_pandas'):
+        col_values = col_values.to_pandas()
+    ml_df[col] = le.fit_transform(col_values)
+    label_encoders[col] = le
+
+feature_cols = ['job_title', 'company_size', 'company_industry', 'country', 'remote_type',
+                'experience_level', 'years_experience', 'education_level',
+                'skills_python', 'skills_sql', 'skills_ml', 'skills_deep_learning',
+                'skills_cloud', 'job_posting_month', 'job_posting_year', 'job_openings']
+
+print("Feature columns prepared. Label encoders stored.")
+print(f"Shape: {ml_df.shape}")
+
+--- OUTPUT ---
+Feature columns prepared. Label encoders stored.
+Shape: (16888, 19)
+
+
+--- CODE ---
+### ML 1: Salary Prediction — Random Forest vs. Gradient Boosting vs. Linear Regression
+
+# Prepare data
+X = ml_df[feature_cols].astype('float32')
+y = ml_df['salary'].astype('float32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+def to_cpu(x):
+    if hasattr(x, 'to_numpy'):
+        return x.to_numpy()
+    return x
+
+models = {
+    'Linear Regression (cuML)': cuLinearRegression(),
+    'Random Forest (cuML)': cuRFRegressor(n_estimators=333, random_state=42),
+    'Gradient Boosting (sklearn)': GradientBoostingRegressor(n_estimators=333, random_state=42),
+}
+
+results = []
+for name, model in models.items():
+    if 'sklearn' in name:
+        model.fit(to_cpu(X_train), to_cpu(y_train))
+        preds = model.predict(to_cpu(X_test))
+    else:
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
+
+    y_test_cpu = to_cpu(y_test)
+    preds_cpu = to_cpu(preds)
+
+    results.append({
+        'Model': name,
+        'MAE': mean_absolute_error(y_test_cpu, preds_cpu),
+        'RMSE': mean_squared_error(y_test_cpu, preds_cpu) ** 0.5,
+        'R²': r2_score(y_test_cpu, preds_cpu),
+    })
+
+results_df = pd.DataFrame(results)
+print("=== Salary Prediction Model Comparison ===")
+print(results_df.to_string(index=False))
+
+# Feature importance (using cuRFRegressor for visualization)
+gbr_model = GradientBoostingRegressor(n_estimators=333, random_state=42)
+gbr_model.fit(to_cpu(X_train), to_cpu(y_train))
+
+importance = pd.DataFrame({'Feature': feature_cols, 'Importance': gbr_model.feature_importances_})
+importance = importance.sort_values('Importance', ascending=False)
+fig = px.bar(importance, x='Importance', y='Feature', orientation='h',
+             title='Feature Importance for Salary Prediction (Random Forest)',
+             labels={'Importance': 'Importance Score'})
+fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/ml01_01.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+=== Salary Prediction Model Comparison ===
+                      Model          MAE         RMSE       R²
+   Linear Regression (cuML) 26500.003906 33919.047156 0.182302
+       Random Forest (cuML) 22002.154297 30292.415949 0.347811
+Gradient Boosting (sklearn) 21259.041071 29649.772159 0.375189
+
+
+--- CODE ---
+### ML 2: Experience Level Classification
+
+X = ml_df[['job_title', 'company_size', 'company_industry', 'country', 'remote_type',
+           'years_experience', 'education_level', 'skills_python', 'skills_sql',
+           'skills_ml', 'skills_deep_learning', 'skills_cloud', 'salary',
+           'job_posting_year', 'job_openings']].astype('float32')
+y = ml_df['experience_level'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_clf = cuRFClassifier(n_estimators=333, n_bins=200, n_streams=8, random_state=42)
+rf_clf.fit(X_train, y_train)
+preds = rf_clf.predict(X_test)
+
+y_test_cpu = to_cpu(y_test)
+preds_cpu = to_cpu(preds)
+
+print("=== Experience Level Classification (Random Forest - cuML) ===")
+print(f"Accuracy: {accuracy_score(y_test_cpu, preds_cpu):.4f}\n")
+target_names = label_encoders['experience_level'].classes_
+print(classification_report(y_test_cpu, preds_cpu, target_names=target_names))
+
+# Confusion matrix
+cm = confusion_matrix(y_test_cpu, preds_cpu)
+fig = px.imshow(cm, text_auto=True, x=target_names, y=target_names,
+                title='Confusion Matrix — Experience Level Classification',
+                labels={'x': 'Predicted', 'y': 'Actual', 'color': 'Count'},
+                color_continuous_scale='Blues')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/ml02_01.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+=== Experience Level Classification (Random Forest - cuML) ===
+Accuracy: 0.6555
+
+              precision    recall  f1-score   support
+
+       Entry       0.71      0.95      0.81       526
+         Mid       0.61      0.45      0.52      1096
+      Senior       0.65      0.71      0.68      1249
+
+    accuracy                           0.66      2871
+   macro avg       0.66      0.70      0.67      2871
+weighted avg       0.65      0.66      0.64      2871
+
+
+
+--- CODE ---
+### ML 3: Hiring Urgency Prediction
+X = ml_df[feature_cols].astype('float32')
+y = ml_df['hiring_urgency'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_urgency = cuRFClassifier(n_estimators=333, n_bins=200, n_streams=8, random_state=42)
+rf_urgency.fit(X_train, y_train)
+preds = rf_urgency.predict(X_test)
+
+y_test_cpu = to_cpu(y_test)
+preds_cpu = to_cpu(preds)
+
+print("=== Hiring Urgency Prediction (Random Forest - cuML) ===")
+print(f"Accuracy: {accuracy_score(y_test_cpu, preds_cpu):.4f}\n")
+target_names_urgency = label_encoders['hiring_urgency'].classes_
+print(classification_report(y_test_cpu, preds_cpu, target_names=target_names_urgency))
+
+cm = confusion_matrix(y_test_cpu, preds_cpu)
+fig = px.imshow(cm, text_auto=True, x=target_names_urgency, y=target_names_urgency,
+                title='Confusion Matrix — Hiring Urgency Prediction',
+                labels={'x': 'Predicted', 'y': 'Actual', 'color': 'Count'},
+                color_continuous_scale='Oranges')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/ml03_01.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+=== Hiring Urgency Prediction (Random Forest - cuML) ===
+Accuracy: 0.5681
+
+              precision    recall  f1-score   support
+
+        High       0.59      0.93      0.72      1569
+         Low       0.48      0.17      0.25       695
+      Medium       0.36      0.09      0.14       607
+
+    accuracy                           0.57      2871
+   macro avg       0.48      0.40      0.37      2871
+weighted avg       0.51      0.57      0.48      2871
+
+
+
+--- CODE ---
+### ML 4: Remote Type Prediction
+X = ml_df[['job_title', 'company_size', 'company_industry', 'country',
+           'experience_level', 'years_experience', 'education_level',
+           'skills_python', 'skills_sql', 'skills_ml', 'skills_deep_learning',
+           'skills_cloud', 'salary', 'job_posting_year', 'job_openings', 'hiring_urgency']].astype('float32')
+y = ml_df['remote_type'].astype('int32')
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.17, random_state=42)
+
+rf_remote = cuRFClassifier(n_estimators=333, n_bins=200, n_streams=8, random_state=42)
+rf_remote.fit(X_train, y_train)
+preds = rf_remote.predict(X_test)
+
+y_test_cpu = to_cpu(y_test)
+preds_cpu = to_cpu(preds)
+
+print("=== Remote Type Prediction (Random Forest - cuML) ===")
+print(f"Accuracy: {accuracy_score(y_test_cpu, preds_cpu):.4f}\n")
+target_names_remote = label_encoders['remote_type'].classes_
+print(classification_report(y_test_cpu, preds_cpu, target_names=target_names_remote))
+
+cm = confusion_matrix(y_test_cpu, preds_cpu)
+fig = px.imshow(cm, text_auto=True, x=target_names_remote, y=target_names_remote,
+                title='Confusion Matrix — Remote Type Prediction',
+                labels={'x': 'Predicted', 'y': 'Actual', 'color': 'Count'},
+                color_continuous_scale='Greens')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/ml04_01.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+=== Remote Type Prediction (Random Forest - cuML) ===
+Accuracy: 0.4862
+
+              precision    recall  f1-score   support
+
+      Hybrid       0.42      0.54      0.47       901
+      Onsite       0.40      0.23      0.29       781
+      Remote       0.58      0.61      0.60      1189
+
+    accuracy                           0.49      2871
+   macro avg       0.47      0.46      0.45      2871
+weighted avg       0.48      0.49      0.47      2871
+
+
+
+--- CODE ---
+### ML 5: Job Market Growth Analysis — Trend and Year-over-Year Growth
+# 2026 only contains 1 quarter of data (Jan-Mar). 
+# To compute meaningful year-over-year growth and linear trends,
+# we annualize the 2026 data by multiplying it by 4 (12 months / 3 months).
+
+# --- 1. Annual posting counts and YoY growth ---
+annual_counts = ai_df.groupby('job_posting_year').size().reset_index(name='postings')
+
+# Annualize 2026
+months_in_2026 = ai_df[ai_df['job_posting_year'] == 2026]['job_posting_month'].nunique()
+annualize_factor = 12 / months_in_2026 if months_in_2026 > 0 else 1
+
+annual_counts['annualized_postings'] = annual_counts['postings'].copy()
+annual_counts.loc[annual_counts['job_posting_year'] == 2026, 'annualized_postings'] *= annualize_factor
+annual_counts['yoy_growth'] = annual_counts['annualized_postings'].pct_change() * 100
+
+# --- 2. Entry-level annual counts and YoY growth ---
+entry_annual = ai_df[ai_df['experience_level'] == 'Entry'].groupby('job_posting_year').size().reset_index(name='entry_postings')
+annual_counts = annual_counts.merge(entry_annual, on='job_posting_year')
+
+annual_counts['annualized_entry_postings'] = annual_counts['entry_postings'].copy()
+annual_counts.loc[annual_counts['job_posting_year'] == 2026, 'annualized_entry_postings'] *= annualize_factor
+annual_counts['entry_yoy_growth'] = annual_counts['annualized_entry_postings'].pct_change() * 100
+
+# --- 3. Linear trend fit (using annualized data) ---
+years = annual_counts['job_posting_year'].values.astype(float)
+counts_annualized = annual_counts['annualized_postings'].values.astype(float)
+slope, intercept = np.polyfit(years, counts_annualized, 1)
+trend_line = slope * years + intercept
+
+print('=== Job Market Growth Analysis ===')
+print(f'Linear trend: ~{slope:.0f} additional postings per year (based on annualized data)')
+print(f'\nYear-over-Year Growth Rates:')
+for _, row in annual_counts.iterrows():
+    year = int(row['job_posting_year'])
+    yoy = f"{row['yoy_growth']:+.1f}%" if not np.isnan(row['yoy_growth']) else 'N/A'
+    entry_yoy = f"{row['entry_yoy_growth']:+.1f}%" if not np.isnan(row['entry_yoy_growth']) else 'N/A'
+    
+    if year == 2026:
+        print(f"  {year}: {int(row['postings']):,} actual -> {int(row['annualized_postings']):,} annualized ({yoy})  |  {int(row['entry_postings']):,} actual -> {int(row['annualized_entry_postings']):,} entry annualized ({entry_yoy})")
+    else:
+        print(f"  {year}: {int(row['postings']):,} total ({yoy})  |  {int(row['entry_postings']):,} entry-level ({entry_yoy})")
+
+# --- 4. Visualization: Total vs Entry postings with trend ---
+fig = make_subplots(rows=1, cols=2, subplot_titles=('Total Job Postings with Linear Trend',
+                                                      'Year-over-Year Growth: Total vs. Entry-Level'))
+
+# Subplot 1: Total Postings (use annualized for all so it's a single bar series, but color 2026 differently)
+colors = ['#636EFA'] * len(annual_counts)
+colors[-1] = 'rgba(99, 110, 250, 0.5)' # Lighter color for projected 2026
+
+fig.add_trace(go.Bar(x=annual_counts['job_posting_year'], 
+                     y=annual_counts['annualized_postings'],
+                     name='Annualized Postings', marker_color=colors,
+                     text=annual_counts['annualized_postings'].apply(lambda x: f"{x:,.0f}{'*' if x == annual_counts['annualized_postings'].iloc[-1] else ''}"),
+                     textposition='auto'), row=1, col=1)
+
+fig.add_trace(go.Scatter(x=annual_counts['job_posting_year'], y=trend_line,
+                         mode='lines', name=f'Trend (+{slope:.0f}/yr)',
+                         line=dict(dash='dash', color='red', width=2)), row=1, col=1)
+
+# Subplot 2: YoY Growth
+fig.add_trace(go.Bar(x=annual_counts['job_posting_year'], y=annual_counts['yoy_growth'],
+                     name='Total YoY %', marker_color='#636EFA'), row=1, col=2)
+fig.add_trace(go.Bar(x=annual_counts['job_posting_year'], y=annual_counts['entry_yoy_growth'],
+                     name='Entry-Level YoY %', marker_color='#EF553B'), row=1, col=2)
+
+fig.update_layout(title='Job Market Growth Analysis: Overall Trend and Entry-Level Comparison<br><sup>*2026 figures are annualized based on Q1 data</sup>',
+                  height=800, barmode='group')
+fig.update_xaxes(title_text='Year', row=1, col=1)
+fig.update_xaxes(title_text='Year', row=1, col=2)
+fig.update_yaxes(title_text='Number of Postings', row=1, col=1)
+fig.update_yaxes(title_text='Growth Rate (%)', row=1, col=2)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/ml05_01.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+=== Job Market Growth Analysis ===
+Linear trend: ~376 additional postings per year (based on annualized data)
+
+Year-over-Year Growth Rates:
+  2020: 2,280 total (N/A)  |  389 entry-level (N/A)
+  2021: 2,236 total (-1.9%)  |  389 entry-level (+0.0%)
+  2022: 2,301 total (+2.9%)  |  405 entry-level (+4.1%)
+  2023: 2,962 total (+28.7%)  |  533 entry-level (+31.6%)
+  2024: 2,960 total (-0.1%)  |  509 entry-level (-4.5%)
+  2025: 2,860 total (-3.4%)  |  487 entry-level (-4.3%)
+  2026: 1,289 actual -> 5,156 annualized (+80.3%)  |  209 actual -> 836 entry annualized (+71.7%)
+
+
+--- MARKDOWN ---
+---
+
+=== DEEP LEARNING ===
+
+--- MARKDOWN ---
+## DEEP LEARNING
+
+The sklearn models above tell us *what predicts salary*. Now we ask a different question: **what hidden structure exists in the AI job market?**
+
+Deep neural networks won't beat Gradient Boosting on prediction accuracy for 15k tabular rows — that's well-established. Instead, we use them as **exploration tools**:
+- **Entity Embeddings** (TensorFlow/Keras): Learn a continuous "map" of how job categories relate — which roles, countries, and industries the model treats as salary-equivalent
+- **Autoencoder Anomaly Detection** (TensorFlow/Keras): Find structurally unusual job postings — unusual *combinations* of features, not just single-column outliers
+- **Integrated Gradients** (PyTorch): Per-subgroup feature attribution that shows how salary drivers differ for Entry vs. Senior roles, or across countries
+
+--- CODE ---
+### DNN 1: Entity Embeddings — Learning the Hidden Geometry of Job Categories (TensorFlow/Keras)
+
+# --- Define categorical features with embedding dimensions ---
+# Rule of thumb: embedding_dim = min(50, num_unique // 2 + 1)
+cat_feature_info = {
+    'job_title':        (len(label_encoders['job_title'].classes_), 3),
+    'company_size':     (len(label_encoders['company_size'].classes_), 2),
+    'company_industry': (len(label_encoders['company_industry'].classes_), 3),
+    'country':          (len(label_encoders['country'].classes_), 3),
+    'remote_type':      (len(label_encoders['remote_type'].classes_), 2),
+    'experience_level': (len(label_encoders['experience_level'].classes_), 2),
+    'education_level':  (len(label_encoders['education_level'].classes_), 2),
+    'hiring_urgency':   (len(label_encoders['hiring_urgency'].classes_), 2),
+}
+
+num_features = ['years_experience', 'skills_python', 'skills_sql', 'skills_ml',
+                'skills_deep_learning', 'skills_cloud', 'job_posting_month',
+                'job_posting_year', 'job_openings']
+
+# --- Prepare data ---
+X_cat = {col: ml_df[col].values for col in cat_feature_info}
+X_num = ml_df[num_features].values.astype('float32')
+scaler_emb = StandardScaler()
+X_num_scaled = scaler_emb.fit_transform(X_num)
+y_emb = ml_df['salary'].values.astype('float32')
+
+indices = np.arange(len(y_emb))
+train_idx, test_idx = train_test_split(indices, test_size=0.2, random_state=42)
+
+X_cat_train = {col: vals[train_idx] for col, vals in X_cat.items()}
+X_cat_test  = {col: vals[test_idx]  for col, vals in X_cat.items()}
+X_num_train, X_num_test = X_num_scaled[train_idx], X_num_scaled[test_idx]
+y_emb_train, y_emb_test = y_emb[train_idx], y_emb[test_idx]
+
+# --- Build entity embedding model (Keras Functional API) ---
+cat_inputs, cat_embeddings = [], []
+for col, (n_unique, emb_dim) in cat_feature_info.items():
+    inp = keras.Input(shape=(1,), name=f'input_{col}')
+    emb = layers.Embedding(input_dim=n_unique, output_dim=emb_dim, name=f'emb_{col}')(inp)
+    emb = layers.Flatten()(emb)
+    cat_inputs.append(inp)
+    cat_embeddings.append(emb)
+
+num_input = keras.Input(shape=(len(num_features),), name='input_numerical')
+
+x = layers.Concatenate()(cat_embeddings + [num_input])
+
+# --- Deep Tabular MLP with Residual Connections ---
+# Initial projection to desired width
+x = layers.Dense(512, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+# Residual Block 1
+res = x
+x = layers.Dense(512, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.2)(x)
+x = layers.Dense(512)(x)
+x = layers.Add()([res, x])
+x = layers.Activation('silu')(x)
+x = layers.BatchNormalization()(x)
+
+# Residual Block 2 (with dimension reduction)
+res = layers.Dense(256)(x) # Match dimensions
+x = layers.Dense(256, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.2)(x)
+x = layers.Dense(256)(x)
+x = layers.Add()([res, x])
+x = layers.Activation('silu')(x)
+x = layers.BatchNormalization()(x)
+
+# Residual Block 3 (with dimension reduction)
+res = layers.Dense(128)(x) # Match dimensions
+x = layers.Dense(128, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.2)(x)
+x = layers.Dense(128)(x)
+x = layers.Add()([res, x])
+x = layers.Activation('silu')(x)
+x = layers.BatchNormalization()(x)
+
+# Residual Block 4 (with dimension reduction)
+res = layers.Dense(64)(x) # Match dimensions
+x = layers.Dense(64, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.1)(x)
+x = layers.Dense(64)(x)
+x = layers.Add()([res, x])
+x = layers.Activation('silu')(x)
+x = layers.BatchNormalization()(x)
+
+# Final funnel to output
+x = layers.Dense(32, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.1)(x)
+x = layers.Dense(16, activation='silu')(x)
+output = layers.Dense(1, name='salary_output')(x)
+
+emb_model = keras.Model(inputs=cat_inputs + [num_input], outputs=output)
+emb_model.compile(optimizer=keras.optimizers.AdamW(learning_rate=0.001, weight_decay=1e-4), loss='mse', metrics=['mae'])
+def make_input_dict(X_cat_dict, X_num_array):
+    d = {f'input_{col}': vals for col, vals in X_cat_dict.items()}
+    d['input_numerical'] = X_num_array
+    return d
+
+history_emb = emb_model.fit(
+    make_input_dict(X_cat_train, X_num_train), y_emb_train,
+    validation_split=0.15, epochs=333, batch_size=256,
+    callbacks=[keras.callbacks.EarlyStopping(patience=33, restore_best_weights=True),
+               keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5)],
+    verbose=1
+)
+
+# --- Evaluate ---
+preds_emb = emb_model.predict(make_input_dict(X_cat_test, X_num_test)).flatten()
+dnn_r2 = r2_score(y_emb_test, preds_emb)
+dnn_mae = mean_absolute_error(y_emb_test, preds_emb)
+print(f"\n=== DNN with Entity Embeddings — Salary Prediction ===")
+print(f"MAE:  ${dnn_mae:,.0f}")
+print(f"R²:   {dnn_r2:.4f}")
+print(f"(Compare to Gradient Boosting R² from ML 1 — GB likely wins on metrics.)")
+print(f"(The embeddings below reveal structure GB cannot show.)\n")
+
+# --- Extract embedding weights ---
+embedding_data = {}
+for col in cat_feature_info:
+    emb_layer = emb_model.get_layer(f'emb_{col}')
+    weights = emb_layer.get_weights()[0]
+    labels = label_encoders[col].classes_
+    embedding_data[col] = (labels, weights)
+
+# --- Visualization 1: 2D Embedding Scatter for 3D categories ---
+cols_3d = ['job_title', 'company_industry', 'country']
+fig = make_subplots(rows=1, cols=3,
+                    subplot_titles=[f'{c.replace("_", " ").title()} Embeddings' for c in cols_3d])
+colors = px.colors.qualitative.Set2
+
+for i, col in enumerate(cols_3d):
+    labels, weights = embedding_data[col]
+    for j, label in enumerate(labels):
+        fig.add_trace(go.Scatter(
+            x=[weights[j, 0]], y=[weights[j, 1]],
+            mode='markers+text', text=[label], textposition='top center',
+            marker=dict(size=14, color=colors[j % len(colors)]),
+            showlegend=False,
+        ), row=1, col=i+1)
+    fig.update_xaxes(title_text='Embedding Dim 1', row=1, col=i+1)
+    fig.update_yaxes(title_text='Embedding Dim 2', row=1, col=i+1)
+
+fig.update_layout(
+    title='Learned Entity Embeddings: How the DNN Sees Job Market Categories<br>'
+          '<sup>Categories close together have similar salary effects — relationships learned, not hand-coded</sup>',
+    height=500, width=1200)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl01_01.png', scale=2)
+fig.show()
+
+# --- Visualization 2: Cosine distance heatmaps ---
+focus_cols = ['job_title', 'country', 'company_industry', 'experience_level']
+fig = make_subplots(rows=2, cols=2,
+                    subplot_titles=[f'{c.replace("_", " ").title()}: Embedding Distance' for c in focus_cols])
+
+for idx, col in enumerate(focus_cols):
+    labels, weights = embedding_data[col]
+    dist_matrix = squareform(pdist(weights, metric='cosine'))
+    row, col_idx = divmod(idx, 2)
+    fig.add_trace(go.Heatmap(
+        z=dist_matrix, x=list(labels), y=list(labels),
+        colorscale='Viridis', text=np.round(dist_matrix, 3),
+        texttemplate='%{text}', showscale=(idx == 0),
+    ), row=row+1, col=col_idx+1)
+
+fig.update_layout(
+    title='Embedding Cosine Distance: Which Categories Does the DNN Treat as Equivalent?<br>'
+          '<sup>Low distance = model learned these categories have similar salary effects</sup>',
+    height=700, width=900)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl01_02.png', scale=2)
+fig.show()
+
+# --- Training history ---
+fig = go.Figure()
+fig.add_trace(go.Scatter(y=history_emb.history['loss'], name='Train Loss'))
+fig.add_trace(go.Scatter(y=history_emb.history['val_loss'], name='Val Loss'))
+fig.update_layout(title='Entity Embedding DNN — Training History',
+                  xaxis_title='Epoch', yaxis_title='MSE Loss')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl01_03.png', scale=2)
+fig.show()
+
+--- OUTPUT ---
+I0000 00:00:1775644255.665154    5173 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 7358 MB memory:  -> device: 0, name: NVIDIA GeForce RTX 2080 Ti, pci bus id: 0000:09:00.0, compute capability: 7.5
+
+Epoch 1/333
+
+I0000 00:00:1775644274.692015    5743 service.cc:153] XLA service 0x7f9ae0051a70 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+I0000 00:00:1775644274.692060    5743 service.cc:161]   StreamExecutor [0]: NVIDIA GeForce RTX 2080 Ti, Compute Capability 7.5 (Driver: 13.2.0; Runtime: 13.0.0; Toolkit: 12.5.0; DNN: 9.13.0)
+I0000 00:00:1775644275.112113    5743 dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+I0000 00:00:1775644277.359071    5743 cuda_dnn.cc:461] Loaded cuDNN version 91300
+I0000 00:00:1775644278.126678    5743 dot_merger.cc:481] Merging Dots in computation: a_inference_one_step_on_data_12580__.113
+
+[1m16/45[0m [32m━━━━━━━
+...[TRUNCATED]
+
+--- CODE ---
+### DNN 2: Autoencoder Anomaly Detection — Finding Structurally Unusual Job Postings (TensorFlow/Keras)
+
+# --- Prepare all features as a single normalized matrix ---
+ae_features = feature_cols + ['hiring_urgency', 'salary']
+X_ae = ml_df[ae_features].values.astype('float32')
+scaler_ae = StandardScaler()
+X_ae_scaled = scaler_ae.fit_transform(X_ae)
+n_ae_features = X_ae_scaled.shape[1]
+
+# --- Build autoencoder ---
+ae_input = keras.Input(shape=(n_ae_features,), name='ae_input')
+
+# --- Encoder ---
+x = layers.Dense(256, activation='silu')(ae_input)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.1)(x)
+
+x = layers.Dense(128, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+x = layers.Dense(64, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+x = layers.Dense(32, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.1)(x)
+
+# --- Bottleneck (Linear activation maximizes representation space) ---
+bottleneck = layers.Dense(8, activation='linear', name='bottleneck')(x)
+
+# --- Decoder ---
+x = layers.Dense(32, activation='silu')(bottleneck)
+x = layers.BatchNormalization()(x)
+x = layers.Dropout(0.1)(x)
+
+x = layers.Dense(64, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+x = layers.Dense(128, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+x = layers.Dense(256, activation='silu')(x)
+x = layers.BatchNormalization()(x)
+
+ae_output = layers.Dense(n_ae_features, activation='linear', name='reconstruction')(x)
+
+autoencoder = keras.Model(inputs=ae_input, outputs=ae_output)
+autoencoder.compile(optimizer=keras.optimizers.AdamW(learning_rate=0.001, weight_decay=1e-4), loss='mse')
+encoder = keras.Model(inputs=ae_input, outputs=autoencoder.get_layer('bottleneck').output, name='encoder')
+
+# --- Train (unsupervised — reconstruct itself) ---
+history_ae = autoencoder.fit(
+    X_ae_scaled, X_ae_scaled, epochs=333, batch_size=256, validation_split=0.1,
+    callbacks=[keras.callbacks.EarlyStopping(patience=33, restore_best_weights=True),
+               keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=13)],
+    verbose=1
+)
+
+# --- Compute reconstruction error per sample ---
+reconstructed = autoencoder.predict(X_ae_scaled)
+mse_per_sample = np.mean((X_ae_scaled - reconstructed) ** 2, axis=1)
+
+anomaly_df = ai_df.copy()
+anomaly_df['reconstruction_error'] = mse_per_sample
+anomaly_df['is_anomaly'] = mse_per_sample > np.percentile(mse_per_sample, 97)
+
+n_anomalies = anomaly_df['is_anomaly'].sum()
+print(f"\n=== Autoencoder Anomaly Detection ===")
+print(f"Total postings: {len(anomaly_df):,}")
+print(f"Anomalies (top 3% reconstruction error): {n_anomalies}")
+print(f"Error — Mean: {mse_per_sample.mean():.4f}, 97th pctl: {np.percentile(mse_per_sample, 97):.4f}")
+
+# --- Viz 1: Reconstruction error distribution ---
+fig = go.Figure()
+fig.add_trace(go.Histogram(x=mse_per_sample[~anomaly_df['is_anomaly'].values],
+                           name='Normal', marker_color='steelblue', opacity=0.7))
+fig.add_trace(go.Histogram(x=mse_per_sample[anomaly_df['is_anomaly'].values],
+                           name='Anomaly (top 3%)', marker_color='crimson', opacity=0.7))
+fig.update_layout(
+    title='Autoencoder Reconstruction Error Distribution<br>'
+          '<sup>High error = unusual feature combination the model cannot compress/reconstruct</sup>',
+    xaxis_title='Mean Squared Reconstruction Error', yaxis_title='Count', barmode='overlay')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl02_01.png', scale=2)
+fig.show()
+
+# --- Viz 2: Anomaly vs normal category distribution ---
+cat_compare = ['job_title', 'company_industry', 'country', 'experience_level',
+               'education_level', 'remote_type', 'hiring_urgency', 'company_size']
+fig = make_subplots(rows=2, cols=4,
+                    subplot_titles=[c.replace('_', ' ').title() for c in cat_compare])
+
+for idx, col in enumerate(cat_compare):
+    row, col_idx = divmod(idx, 4)
+    normal_pct = anomaly_df[~anomaly_df['is_anomaly']][col].value_counts(normalize=True).sort_index()
+    anomaly_pct = anomaly_df[anomaly_df['is_anomaly']][col].value_counts(normalize=True).sort_index()
+    all_cats = sorted(set(normal_pct.index) | set(anomaly_pct.index))
+
+    fig.add_trace(go.Bar(x=all_cats, y=[normal_pct.get(c, 0) for c in all_cats],
+                         name='Normal', marker_color='steelblue', showlegend=(idx == 0)),
+                  row=row+1, col=col_idx+1)
+    fig.add_trace(go.Bar(x=all_cats, y=[anomaly_pct.get(c, 0) for c in all_cats],
+                         name='Anomaly', marker_color='crimson', showlegend=(idx == 0)),
+                  row=row+1, col=col_idx+1)
+
+fig.update_layout(
+    title='Anomalous vs. Normal Postings: Category Distribution<br>'
+          '<sup>Look for categories over/under-represented in anomalies</sup>',
+    height=600, width=1200, barmode='group')
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl02_02.png', scale=2)
+fig.show()
+
+# --- Viz 3: Salary vs experience colored by anomaly ---
+fig = px.scatter(
+    anomaly_df, x='years_experience', y='salary', color='is_anomaly',
+    color_discrete_map={True: 'crimson', False: 'steelblue'}, opacity=0.4,
+    title='Anomalous Job Postings: Salary vs. Experience<br>'
+          '<sup>Red = structurally unusual combinations, not just salary outliers</sup>',
+    labels={'years_experience': 'Years of Experience', 'salary': 'Salary (USD)', 'is_anomaly': 'Anomaly'},
+    hover_data=['job_title', 'company_industry', 'country', 'experience_level'])
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl02_03.png', scale=2)
+fig.show()
+
+# --- Viz 4: Bottleneck space (PCA projection) ---
+bottleneck_repr = encoder.predict(X_ae_scaled)
+pca = PCA(n_components=2)
+bottleneck_2d = pca.fit_transform(bottleneck_repr)
+anomaly_df['bottleneck_x'] = bottleneck_2d[:, 0]
+anomaly_df['bottleneck_y'] = bottleneck_2d[:, 1]
+
+fig = px.scatter(
+    anomaly_df, x='bottleneck_x', y='bottleneck_y',
+    color='experience_level', symbol='is_anomaly',
+    symbol_map={True: 'x', False: 'circle'}, opacity=0.5,
+    title='Autoencoder Bottleneck Space (PCA Projection)<br>'
+          '<sup>Each point = job posting compressed to 8 dims then projected to 2D — X = anomaly</sup>',
+    labels={'bottleneck_x': 'PC1', 'bottleneck_y': 'PC2'},
+    hover_data=['job_title', 'salary', 'country', 'company_industry'],
+    category_orders={'experience_level': ['Entry', 'Mid', 'Senior']})
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl02_04.png', scale=2)
+fig.show()
+
+# --- Top anomalies ---
+print("\n=== Top 10 Most Anomalous Postings ===")
+top_anomalies = anomaly_df.nlargest(10, 'reconstruction_error')
+display_cols = ['job_title', 'company_size', 'company_industry', 'country', 'remote_type',
+                'experience_level', 'years_experience', 'education_level', 'salary',
+                'hiring_urgency', 'reconstruction_error']
+print(top_anomalies[display_cols].to_string(index=False))
+
+--- OUTPUT ---
+Epoch 1/333
+
+I0000 00:00:1774787993.777713  438241 dot_merger.cc:481] Merging Dots in computation: a_inference_one_step_on_data_61697__.54
+
+[1m54/55[0m [32m━━━━━━━━━━━━━━━━━━━[0m[37m━[0m [1m0s[0m 4ms/step - loss: 1.6237
+I0000 00:00:1774787999.878331  438243 dot_merger.cc:481] Merging Dots in computation: a_inference_one_step_on_data_61697__.54
+
+[1m55/55[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m23s[0m 154ms/step - loss: 1.2200 - val_loss: 0.9847 - learning_rate: 0.0010
+Epoch 2/333
+[1m55/55[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m0s[0m 7ms/step - loss: 0.8010 - val_loss: 0.9259 - learning_rate: 0.0010
+Epoch 3/333
+[1m55/55[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m0s[0m 6ms/step - loss: 0.7259 - val_loss: 0.8193 - learning_rate: 0.0010
+Epoch 4/333
+[1m55/55[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m0s[0m 7ms/step - loss: 0.6831 - val_loss: 0.7104 - learning_rate: 0.0010
+Epoch 5/333
+[1m55/55[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m0s[0m 6ms/st
+...[TRUNCATED]
+
+--- MARKDOWN ---
+### DL 3: PyTorch Integrated Gradients — Per-Feature Salary Attribution
+
+**Why PyTorch here?** Random Forest gives one global feature-importance bar chart. Integrated
+Gradients (a gradient-based attribution method) gives a *per-sample* importance score for every
+feature, letting us ask richer questions: "What drives salary predictions for Senior vs. Entry
+roles?" or "How does attribution differ across countries?"
+
+PyTorch's eager-mode autograd makes this cleaner to implement than in TensorFlow. We use
+the **Captum** library (Meta's official PyTorch interpretability toolkit). The neural network
+itself will not beat Random Forest on 15k tabular rows — that is expected and fine. The point
+is the *attribution analysis*, not the prediction accuracy.
+
+--- CODE ---
+# ---------------------------------------------------------------------------
+# 1. Prepare data (uses ml_df, feature_cols from the shared ML prep cell)
+# ---------------------------------------------------------------------------
+X_all = ml_df[feature_cols].values.astype(np.float32)
+y_all = ml_df['salary'].values.astype(np.float32)
+
+# Standardize features and target for neural-net training stability
+X_mean, X_std = X_all.mean(axis=0), X_all.std(axis=0) + 1e-8
+y_mean, y_std = y_all.mean(), y_all.std() + 1e-8
+X_scaled = (X_all - X_mean) / X_std
+y_scaled = (y_all - y_mean) / y_std
+
+X_train_t, X_test_t, y_train_t, y_test_t = train_test_split(
+    X_scaled, y_scaled, test_size=0.2, random_state=42
+)
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+X_train_pt = torch.tensor(X_train_t, device=device)
+y_train_pt = torch.tensor(y_train_t, device=device).unsqueeze(1)
+X_test_pt  = torch.tensor(X_test_t,  device=device)
+y_test_pt  = torch.tensor(y_test_t,  device=device).unsqueeze(1)
+
+# ---------------------------------------------------------------------------
+# 2. Define a small MLP — intentionally modest for 15k rows
+# ---------------------------------------------------------------------------
+class SalaryMLP(nn.Module):
+    def __init__(self, n_features):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_features, 1024),
+            nn.SiLU(),
+            nn.BatchNorm1d(1024),
+            nn.Dropout(0.2),
+            nn.Linear(1024, 512),
+            nn.SiLU(),
+            nn.BatchNorm1d(512),
+            nn.Dropout(0.2),
+            nn.Linear(512, 256),
+            nn.SiLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.1),
+            nn.Linear(256, 128),
+            nn.SiLU(),
+            nn.BatchNorm1d(128),
+            nn.Dropout(0.1),
+            nn.Linear(128, 1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+model = SalaryMLP(len(feature_cols)).to(device)
+optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, factor=0.5)
+loss_fn = nn.MSELoss()
+
+# ---------------------------------------------------------------------------
+# 3. Train (mini-batch, early stopping)
+# ---------------------------------------------------------------------------
+batch_size = 256
+best_val_loss = float('inf')
+patience_counter = 0
+train_losses, val_losses = [], []
+
+for epoch in range(333):
+    model.train()
+    perm = torch.randperm(X_train_pt.size(0), device=device)
+    epoch_loss = 0.0
+    for i in range(0, len(perm), batch_size):
+        idx = perm[i:i+batch_size]
+        pred = model(X_train_pt[idx])
+        loss = loss_fn(pred, y_train_pt[idx])
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        epoch_loss += loss.item() * len(idx)
+    train_losses.append(epoch_loss / len(perm))
+
+    model.eval()
+    with torch.no_grad():
+        val_pred = model(X_test_pt)
+        val_loss = loss_fn(val_pred, y_test_pt).item()
+    val_losses.append(val_loss)
+    scheduler.step(val_loss)
+
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        patience_counter = 0
+        best_state = {k: v.clone() for k, v in model.state_dict().items()}
+    else:
+        patience_counter += 1
+        if patience_counter >= 25:
+            break
+
+model.load_state_dict(best_state)
+print(f"Training complete -- stopped at epoch {epoch+1}, best val MSE (scaled): {best_val_loss:.4f}")
+
+# Report R2 in original scale for comparison with sklearn models
+model.eval()
+with torch.no_grad():
+    test_pred_scaled = model(X_test_pt).cpu().numpy().flatten()
+test_pred_dollars = test_pred_scaled * y_std + y_mean
+y_test_dollars = y_test_t * y_std + y_mean
+nn_r2 = r2_score(y_test_dollars, test_pred_dollars)
+nn_mae = mean_absolute_error(y_test_dollars, test_pred_dollars)
+print(f"PyTorch MLP -- R2: {nn_r2:.4f}, MAE: ${nn_mae:,.0f}")
+print("(Expected to underperform tree models on 15k tabular rows -- the value is in attribution below)")
+
+# ---------------------------------------------------------------------------
+# 4. Integrated Gradients — implemented from scratch using PyTorch autograd
+#    No external library needed. The algorithm:
+#    1. Create a straight-line path from baseline (zeros) to input (m steps)
+#    2. Compute gradients of the output w.r.t. input at each step
+#    3. Attribution = (input - baseline) * mean(gradients along path)
+# ---------------------------------------------------------------------------
+def integrated_gradients(model, inputs, baseline, n_steps=69):
+    """Compute Integrated Gradients attribution for a batch of inputs."""
+    model.eval()
+    # inputs: (N, D), baseline: (1, D) or (N, D)
+    # Generate interpolation alphas: shape (n_steps+1, 1, 1) for broadcasting
+    alphas = torch.linspace(0, 1, n_steps + 1, device=inputs.device).view(-1, 1, 1)
+
+    # Interpolated inputs: (n_steps+1, N, D)
+    path = baseline.unsqueeze(0) + alphas * (inputs.unsqueeze(0) - baseline.unsqueeze(0))
+
+    # Compute gradients at each interpolation point
+    grads = []
+    for step in range(n_steps + 1):
+        x_step = path[step].detach().requires_grad_(True)
+        out = model(x_step).sum()
+        out.backward()
+        grads.append(x_step.grad.detach())
+
+    # Stack and average using trapezoidal rule
+    grads = torch.stack(grads, dim=0)  # (n_steps+1, N, D)
+    avg_grads = (grads[:-1] + grads[1:]).mean(dim=0) / 2.0
+
+    # Attribution = (input - baseline) * averaged gradients
+    attributions = (inputs - baseline) * avg_grads
+    return attributions
+
+baseline = torch.zeros(1, len(feature_cols), device=device)
+
+# Process in batches to avoid OOM on large test sets
+attr_chunks = []
+chunk_size = 512
+for i in range(0, X_test_pt.shape[0], chunk_size):
+    chunk = X_test_pt[i:i+chunk_size].detach().clone()
+    attr_chunk = integrated_gradients(model, chunk, baseline, n_steps=69)
+    attr_chunks.append(attr_chunk.cpu().numpy())
+
+attr_np = np.concatenate(attr_chunks, axis=0)  # shape: (n_test, n_features)
+
+# Sanity check: sum of attributions should approximate (prediction - baseline_prediction)
+with torch.no_grad():
+    baseline_pred = model(baseline).item()
+    test_preds_check = model(X_test_pt).cpu().numpy().flatten()
+expected_diff = test_preds_check - baseline_pred
+actual_diff = attr_np.sum(axis=1)
+completeness_error = np.abs(expected_diff - actual_diff).mean()
+print(f"Completeness check (should be small): mean absolute error = {completeness_error:.4f}")
+
+# ---------------------------------------------------------------------------
+# 5. Visualization: Global Attribution (mean |attribution| per feature)
+# ---------------------------------------------------------------------------
+mean_attr = np.abs(attr_np).mean(axis=0)
+attr_df = pd.DataFrame({'Feature': feature_cols, 'Mean |Attribution|': mean_attr})
+attr_df = attr_df.sort_values('Mean |Attribution|', ascending=False)
+
+fig = px.bar(attr_df, x='Mean |Attribution|', y='Feature', orientation='h',
+             title='Integrated Gradients: Global Feature Attribution for Salary (PyTorch MLP)',
+             labels={'Mean |Attribution|': 'Mean Absolute Attribution Score'},
+             color='Mean |Attribution|', color_continuous_scale='Viridis')
+fig.update_layout(yaxis={'categoryorder': 'total ascending'}, showlegend=False)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl03_01.png', scale=2)
+fig.show()
+
+# ---------------------------------------------------------------------------
+# 6. Visualization: Attribution by Experience Level
+#    "What drives salary differently for Entry vs. Mid vs. Senior?"
+# ---------------------------------------------------------------------------
+# Recover experience_level for the test split
+_, test_indices = train_test_split(range(len(X_all)), test_size=0.2, random_state=42)
+exp_levels_test = ml_df.iloc[test_indices]['experience_level'].values
+exp_names_test = [label_encoders['experience_level'].classes_[v] for v in exp_levels_test]
+
+# Build attribution-by-group dataframe
+rows = []
+for level_name in ['Entry', 'Mid', 'Senior']:
+    mask = np.array(exp_names_test) == level_name
+    if mask.sum() == 0:
+        continue
+    group_attr = np.abs(attr_np[mask]).mean(axis=0)
+    for feat, val in zip(feature_cols, group_attr):
+        rows.append({'Experience Level': level_name, 'Feature': feat, 'Attribution': val})
+
+attr_by_exp = pd.DataFrame(rows)
+
+fig = px.bar(attr_by_exp, x='Attribution', y='Feature', color='Experience Level',
+             orientation='h', barmode='group',
+             title='What Drives Salary Predictions? Attribution by Experience Level',
+             category_orders={'Experience Level': ['Entry', 'Mid', 'Senior']},
+             labels={'Attribution': 'Mean |Attribution|'})
+fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=600)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl03_02.png', scale=2)
+fig.show()
+
+# ---------------------------------------------------------------------------
+# 7. Visualization: Attribution by Country
+#    "Does the model rely on different signals in different markets?"
+# ---------------------------------------------------------------------------
+countries_test = [label_encoders['country'].classes_[v]
+                  for v in ml_df.iloc[test_indices]['country'].values]
+
+rows_c = []
+for country_name in label_encoders['country'].classes_:
+    mask = np.array(countries_test) == country_name
+    if mask.sum() < 20:
+        continue
+    group_attr = np.abs(attr_np[mask]).mean(axis=0)
+    for feat, val in zip(feature_cols, group_attr):
+        rows_c.append({'Country': country_name, 'Feature': feat, 'Attribution': val})
+
+attr_by_country = pd.DataFrame(rows_c)
+
+# Show top 6 features per country for readability
+top_features = attr_df.head(6)['Feature'].tolist()
+attr_by_country_top = attr_by_country[attr_by_country['Feature'].isin(top_features)]
+
+fig = px.bar(attr_by_country_top, x='Attribution', y='Feature', color='Country',
+             orientation='h', barmode='group',
+             title='Salary Attribution by Country (Top 6 Features)',
+             labels={'Attribution': 'Mean |Attribution|'})
+fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'),
+    xaxis=dict(gridcolor='rgba(255,255,255,0.69)'),
+    yaxis=dict(gridcolor='rgba(255,255,255,0.69)')
+)
+
+fig.write_image('notebook_images/plot_images/new/dl03_03.png', scale=2)
+fig.show()
+
+print("\n--- Interpretation Guide ---")
+print("Higher attribution = that feature contributed MORE to the model's salary prediction.")
+print("Unlike Random Forest importance (one global ranking), Integrated Gradients shows")
+print("HOW attributions shift across subgroups -- e.g., 'years_experience' may matter more")
+print("for Senior roles while 'education_level' matters more for Entry roles.")
+
+--- OUTPUT ---
+Training complete -- stopped at epoch 34, best val MSE (scaled): 0.6716
+PyTorch MLP -- R2: 0.3383, MAE: $22,156
+(Expected to underperform tree models on 15k tabular rows -- the value is in attribution below)
+Completeness check (should be small): mean absolute error = 0.0000
+
+
+--- Interpretation Guide ---
+Higher attribution = that feature contributed MORE to the model's salary prediction.
+Unlike Random Forest importance (one global ranking), Integrated Gradients shows
+HOW attributions shift across subgroups -- e.g., 'years_experience' may matter more
+for Senior roles while 'education_level' matters more for Entry roles.
